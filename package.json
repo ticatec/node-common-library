@@ -1,0 +1,34 @@
+{
+  "name": "@ticatec/node-common-library",
+  "version": "2.0.1",
+  "description": "A set of common classes for node express apps.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf ./lib && tsc",
+    "publish-public": "npm publish --access public"
+  },
+  "keywords": [
+    "ticatec",
+    "common",
+    "database",
+    "utils"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ticatec/node-library.git"
+  },
+  "author": "Henry Feng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ticatec/node-library/issues"
+  },
+  "homepage": "https://github.com/ticatec/node-library/tree/main/ticatec-node-common-library",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "log4js": "^6.7.0"
+  }
+}
