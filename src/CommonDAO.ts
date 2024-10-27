@@ -3,9 +3,12 @@ import StringUtils from "./StringUtils";
 import DBConnection from "./db/DBConnection";
 import SearchCriteria from "./db/SearchCriteria";
 import PaginationList from "./db/PaginationList";
+import log4js from "log4js";
 
 
 export default abstract class CommonDAO {
+
+    protected logger = log4js.getLogger("DAO");
 
     /**
      * 生成32位的uuid

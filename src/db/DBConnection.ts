@@ -54,6 +54,55 @@ export default abstract class DBConnection {
      */
     abstract deleteRecord(sql: string, params: Array<any>): Promise<number>;
 
+
+    /**
+     * 获取count数，默认属性是cc
+     * @param data
+     * @param key
+     * @protected
+     */
+    protected getCount(data: any, key: string = 'cc'): number {
+        let s = data == null ? null : data[key];
+        return s == null ? 0 : parseInt(s);
+    }
+
+    /**
+     * 执行count语句，返回count值
+     * @param sql
+     * @param params
+     * @param key
+     * @protected
+     */
+    async executeCountSQL(sql: string, params: Array<any>, key: string='cc'): Promise<number> {
+        return this.getCount(await this.find(sql, params), key);
+    }
+
+    /**
+     *
+     * @param sql
+     * @param params
+     * @param pageNo
+     * @param rowCount
+     * @protected
+     */
+    async quickSearch(sql: string,  params: Array<any>=[], pageNo: number = 1, rowCount: number=25): Promise<any> {
+        pageNo = pageNo < 1 ? 1 : pageNo;
+        let offset = (pageNo - 1) * rowCount;
+        let count = await this.executeCountSQL( `select count(*) as cc from (${sql}) a`, params);
+        if (count > 0 && offset < count) {
+            let list = await this.listQuery(`${sql} ${this.getRowSetLimitClause(rowCount, offset)}`, params);
+            return {
+                list,
+                hasMore: list.length < count
+            }
+        } else {
+            return {
+                list: [],
+                hasMore: false
+            }
+        }
+    }
+
     /**
      * 执行select查询语句，返回数据列表
      * @param sql
