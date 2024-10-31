@@ -16,7 +16,7 @@ export default abstract class CommonSearchCriteria {
     private readonly page: number;
     private readonly rows: number;
 
-    protected constructor(page: number, rows: number) {
+    protected constructor(page?: number, rows?: number) {
         this.page = StringUtils.parseNumber(page, FIRST_PAGE);
         this.rows = StringUtils.parseNumber(rows, DEFAULT_ROWS_PAGE);
     }

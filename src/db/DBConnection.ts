@@ -1,10 +1,15 @@
 import Field from "./Field";
+import fs from "fs";
+import log4js from "log4js";
 
 type PostConstructionFun = (obj: any) => void;
 
 export {PostConstructionFun};
 
+
 export default abstract class DBConnection {
+
+    protected readonly logger = log4js.getLogger('DBConnection');
 
     /**
      * 开始事务
@@ -25,6 +30,12 @@ export default abstract class DBConnection {
      * 关闭
      */
     abstract close(): Promise<void>;
+
+    /**
+     * 执行一个sql语句
+     * @param sql
+     */
+    abstract executeSQL(sql: string): Promise<any>;
 
     /**
      * 执行update/delete查询，返回影响记录的数量
@@ -139,6 +150,26 @@ export default abstract class DBConnection {
      * @param params
      */
     abstract fetchData(sql: string, params?:Array<any>): Promise<any>;
+
+    /**
+     * 执行一个SQL文件
+     * @param file
+     */
+    async executeSQLFile(file: string): Promise<boolean> {
+        let hasError = false;
+        const sqlContent = fs.readFileSync(file, 'utf8');
+        const sqlStatements = sqlContent.split(';').map(stmt => stmt.trim()).filter(stmt => stmt && !stmt.startsWith('--'));
+        for (const statement of sqlStatements) {
+            try {
+                this.logger.debug('execute sql statement: ', statement);
+                await this.executeSQL(statement);
+            } catch (error) {
+                hasError = true;
+                this.logger.error('execute sql statement with error.', error);
+            }
+        }
+        return hasError;
+    }
 
     /**
      * 获取查询结果对应的字段名列表
