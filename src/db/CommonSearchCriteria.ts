@@ -1,15 +1,14 @@
-import DBConnection from './DBConnection';
-import PaginationList from "./PaginationList";
-import StringUtils from "../StringUtils";
-import log4js from 'log4js';
-
-const logger = log4js.getLogger('SearchCriteria');
+import DBConnection from '../../src/db/DBConnection';
+import PaginationList from "../../src/db/PaginationList";
+import StringUtils from "../../src/StringUtils";
+import log4js from '@ticatec/singleton-log4js';
 
 const DEFAULT_ROWS_PAGE = 25;
 const FIRST_PAGE = 1;
 
 export default abstract class CommonSearchCriteria {
 
+    protected readonly logger: any;
     protected sql: string;
     protected orderBy: string = '';
     protected params: Array<any> = [];
@@ -17,6 +16,7 @@ export default abstract class CommonSearchCriteria {
     private readonly rows: number;
 
     protected constructor(page?: number, rows?: number) {
+        this.logger = log4js.getLogger('SearchCriteria');
         this.page = StringUtils.parseNumber(page, FIRST_PAGE);
         this.rows = StringUtils.parseNumber(rows, DEFAULT_ROWS_PAGE);
     }
@@ -30,7 +30,7 @@ export default abstract class CommonSearchCriteria {
      */
     private async queryCount(conn: DBConnection, sql: string, params: Array<any>):Promise<number> {
         let countSQL = `select count(*) as cc from (${sql}) a`;
-        logger.debug('根据条件查询符合的纪录数量：', countSQL, params);
+        this.logger.debug('根据条件查询符合的纪录数量：', countSQL, params);
         let result = await conn.find(countSQL, params);
         return result == null ? 0 : parseInt(result['cc']);
     }
@@ -48,8 +48,8 @@ export default abstract class CommonSearchCriteria {
      * @param s
      * @protected
      */
-    protected isNotEmpty(s: string):boolean {
-        return !StringUtils.isEmpty(s);
+    protected isNotEmpty(s: any):boolean {
+        return StringUtils.isString(s) ? !StringUtils.isEmpty(s) : s != null;
     }
 
     /**
@@ -89,13 +89,34 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
+     * 根据from/to约束一个范围
+     * @param fromValue
+     * @param toValue
+     * @param fromField
+     * @param toField
+     * @param idx
+     * @protected
+     */
+    protected buildRangeCriteria(fromValue: any, toValue: any, fromField: string, toField: string, idx: number): number {
+        if (this.isNotEmpty(fromValue)) {
+            this.sql += ` and ${fromField} >= $${idx++}`;
+            this.params.push(fromValue);
+        }
+        if (this.isNotEmpty(toValue)) {
+            this.sql += ` and ${toField} < $${idx++}`;
+            this.params.push(toValue);
+        }
+        return idx;
+    }
+
+    /**
      * 判断字段是否包含*，有*用like查询，没有的用等于条件查询
      * @param text
      * @param field
      * @param idx
      * @protected
      */
-    protected buildStarCriteria(text: string, field: string, idx: number, ): number {
+    protected buildStarCriteria(text: string, field: string, idx: number ): number {
         if (this.isNotEmpty(text)) {
             if (this.includeStar(text)) {
                 this.sql += ` and ${field} like $${idx++}`;
@@ -145,8 +166,8 @@ export default abstract class CommonSearchCriteria {
             let pageNo = page != null ? StringUtils.parseNumber(page, FIRST_PAGE) : this.page;
             const offset = (pageNo - 1) * rows;
             let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(rows, offset)} `;
-            logger.debug(`符合条件总数：${count}, 需要记录从${offset}开始读取${rows}条记录`);
-            logger.debug('执行查询语句', listSQL, this.params);
+            this.logger.debug(`符合条件总数：${count}, 需要记录从${offset}开始读取${rows}条记录`);
+            this.logger.debug('执行查询语句', listSQL, this.params);
             let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor()) : [];
             const hasMore = offset + rows < count;
             const pages = (Math.floor((count - 1) / rows)) + 1;

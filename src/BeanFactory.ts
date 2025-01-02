@@ -47,6 +47,10 @@ class BeanFactory {
     }
 }
 
-let beanFactory = new BeanFactory();
+if (!global.beanFactoryInstance) {
+    global.beanFactoryInstance = new BeanFactory();
+}
+
+let beanFactory = global.beanFactoryInstance;
 
 export default beanFactory;

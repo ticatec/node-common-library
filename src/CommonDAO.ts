@@ -3,12 +3,16 @@ import StringUtils from "./StringUtils";
 import DBConnection from "./db/DBConnection";
 import SearchCriteria from "./db/SearchCriteria";
 import PaginationList from "./db/PaginationList";
-import log4js from "log4js";
-
+import log4js from '@ticatec/singleton-log4js';
 
 export default abstract class CommonDAO {
 
-    protected logger = log4js.getLogger("DAO");
+    protected readonly logger;
+
+    protected constructor() {
+        this.logger = log4js.getLogger(this.constructor.name);
+        this.logger.debug(`创建DAO实例:${this.constructor.name}`);
+    }
 
     /**
      * 生成32位的uuid
