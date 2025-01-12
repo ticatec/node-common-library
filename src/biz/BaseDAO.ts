@@ -1,4 +1,4 @@
-import {DBConnection} from "../../lib";
+import DBConnection from "../db/DBConnection";
 
 export default interface BaseDAO<T, K> {
 

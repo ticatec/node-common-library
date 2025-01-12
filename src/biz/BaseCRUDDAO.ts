@@ -1,5 +1,5 @@
 import BaseDAO from "./BaseDAO";
-import {DBConnection} from "../../lib";
+import DBConnection from "../db/DBConnection";
 
 export default interface BaseCRUDDAO<T, K> extends BaseDAO<T, K> {
 
