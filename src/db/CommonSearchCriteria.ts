@@ -1,6 +1,6 @@
-import DBConnection from '../../src/db/DBConnection';
-import PaginationList from "../../src/db/PaginationList";
-import StringUtils from "../../src/StringUtils";
+import DBConnection from './DBConnection';
+import PaginationList from "./PaginationList";
+import StringUtils from "../StringUtils";
 import log4js from '@ticatec/singleton-log4js';
 
 const DEFAULT_ROWS_PAGE = 25;
@@ -92,18 +92,17 @@ export default abstract class CommonSearchCriteria {
      * 根据from/to约束一个范围
      * @param fromValue
      * @param toValue
-     * @param fromField
-     * @param toField
+     * @param field
      * @param idx
      * @protected
      */
-    protected buildRangeCriteria(fromValue: any, toValue: any, fromField: string, toField: string, idx: number): number {
+    protected buildRangeCriteria(fromValue: any, toValue: any, field: string, idx: number): number {
         if (this.isNotEmpty(fromValue)) {
-            this.sql += ` and ${fromField} >= $${idx++}`;
+            this.sql += ` and ${field} >= $${idx++}`;
             this.params.push(fromValue);
         }
         if (this.isNotEmpty(toValue)) {
-            this.sql += ` and ${toField} < $${idx++}`;
+            this.sql += ` and ${field} < $${idx++}`;
             this.params.push(toValue);
         }
         return idx;
