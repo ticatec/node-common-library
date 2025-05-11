@@ -45,6 +45,10 @@ class BeanFactory {
             return item.beanInstance;
         }
     }
+
+    createInstance(name: string): any {
+        return this.getInstance(name);
+    }
 }
 
 if (!global.beanFactoryInstance) {

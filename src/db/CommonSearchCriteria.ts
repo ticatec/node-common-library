@@ -1,14 +1,14 @@
 import DBConnection from './DBConnection';
 import PaginationList from "./PaginationList";
 import StringUtils from "../StringUtils";
-import log4js from '@ticatec/singleton-log4js';
+import log4js, {Logger} from 'log4js';
 
 const DEFAULT_ROWS_PAGE = 25;
 const FIRST_PAGE = 1;
 
 export default abstract class CommonSearchCriteria {
 
-    protected readonly logger: any;
+    protected readonly logger: Logger;
     protected sql: string;
     protected orderBy: string = '';
     protected params: Array<any> = [];

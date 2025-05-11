@@ -1,5 +1,5 @@
 
-import log4js from '@ticatec/singleton-log4js';                                                                                                                                                                                                                                                                                                        import DBConnection from "./DBConnection";
+import log4js from 'log4js';                                                                                                                                                                                                                                                                                                        import DBConnection from "./DBConnection";
 import DBFactory from "./DBFactory";
 
 const logger = log4js.getLogger('DBManager')

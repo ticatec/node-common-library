@@ -1,6 +1,6 @@
 import Field from "./Field";
 import fs from "fs";
-import log4js from '@ticatec/singleton-log4js';
+import log4js, {Logger} from 'log4js';
 import PaginationList from "./PaginationList";
 import CommonSearchCriteria from "./CommonSearchCriteria";
 
@@ -11,7 +11,7 @@ export {PostConstructionFun};
 
 export default abstract class DBConnection {
 
-    protected readonly logger: any;
+    protected readonly logger: Logger;
 
     protected constructor() {
         this.logger = log4js.getLogger(this.constructor.name);
@@ -152,13 +152,33 @@ export default abstract class DBConnection {
     }
 
     /**
+     * 处理SQL文件，去除注释行，分割sql语句
+     * @param file
+     * @private
+     */
+    private loadAndSplitSQL(file: string) {
+        let sql = fs.readFileSync(file, 'utf8');
+
+        // 去除多行注释 /* ... */
+        sql = sql.replace(/\/\*[\s\S]*?\*\//g, '');
+
+        // 去除单行注释 -- ... 和 // ...
+        sql = sql.replace(/--.*$/gm, '');
+        sql = sql.replace(/\/\/.*$/gm, '');
+
+        // 按 ; 分割（适用于简单语句，不解析字符串中的 ;）
+        return  sql
+            .split(/;\s*[\r\n]+|;\s*$/) // 按换行或文件结尾的分号切分
+            .map(stmt => stmt.trim())
+            .filter(stmt => stmt.length > 0);
+    }
+    /**
      * 执行一个SQL文件
      * @param file
      */
     async executeSQLFile(file: string): Promise<boolean> {
         let hasError = false;
-        const sqlContent = fs.readFileSync(file, 'utf8');
-        const sqlStatements = sqlContent.split(';').map(stmt => stmt.trim()).filter(stmt => stmt && !stmt.startsWith('--'));
+        const sqlStatements = this.loadAndSplitSQL(file);
         for (const statement of sqlStatements) {
             try {
                 this.logger.debug('execute sql statement: ', statement);

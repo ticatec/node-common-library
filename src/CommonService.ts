@@ -1,13 +1,13 @@
 import DBManager from './db/DBManager'
 import DBConnection from "./db/DBConnection";
 import beanFactory from "./BeanFactory";
-import log4js from '@ticatec/singleton-log4js';
+import log4js, {Logger} from "log4js";
 
 type dbProcessor = (conn: DBConnection) => Promise<any>
 
 export default abstract class CommonService {
 
-    protected readonly logger;
+    protected readonly logger: Logger;
 
     protected constructor() {
         this.logger = log4js.getLogger(this.constructor.name);
