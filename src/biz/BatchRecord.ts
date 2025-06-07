@@ -16,3 +16,5 @@ export default interface BatchRecord<T> {
     error: any;
 
 }
+
+export type BatchRecords<T> = Array<BatchRecord<T>>;

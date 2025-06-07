@@ -30,7 +30,7 @@ export default abstract class CommonSearchCriteria {
      */
     private async queryCount(conn: DBConnection, sql: string, params: Array<any>):Promise<number> {
         let countSQL = `select count(*) as cc from (${sql}) a`;
-        this.logger.debug('根据条件查询符合的纪录数量：', countSQL, params);
+        this.logger.debug('Query the number of records that meet the conditions:', countSQL, params);
         let result = await conn.find(countSQL, params);
         return result == null ? 0 : parseInt(result['cc']);
     }
@@ -165,8 +165,8 @@ export default abstract class CommonSearchCriteria {
             let pageNo = page != null ? StringUtils.parseNumber(page, FIRST_PAGE) : this.page;
             const offset = (pageNo - 1) * rows;
             let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(rows, offset)} `;
-            this.logger.debug(`符合条件总数：${count}, 需要记录从${offset}开始读取${rows}条记录`);
-            this.logger.debug('执行查询语句', listSQL, this.params);
+            this.logger.debug(`Total matching records: ${count}, need to read ${rows} records starting from ${offset}`);
+            this.logger.debug('Executing query statement', listSQL, this.params);
             let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor()) : [];
             const hasMore = offset + rows < count;
             const pages = (Math.floor((count - 1) / rows)) + 1;
