@@ -14,11 +14,17 @@ export default abstract class CommonSearchCriteria {
     protected params: Array<any> = [];
     private readonly page: number;
     private readonly rows: number;
+    protected criteria: any;
 
-    protected constructor(page?: number, rows?: number) {
+    protected constructor(criteria?: any) {
         this.logger = log4js.getLogger('SearchCriteria');
-        this.page = StringUtils.parseNumber(page, FIRST_PAGE);
-        this.rows = StringUtils.parseNumber(rows, DEFAULT_ROWS_PAGE);
+        this.page = StringUtils.parseNumber(criteria?.page, FIRST_PAGE);
+        this.rows = StringUtils.parseNumber(criteria?.rows, DEFAULT_ROWS_PAGE);
+        this.criteria = criteria;
+    }
+
+    protected buildDynamicQuery() {
+
     }
 
     /**
@@ -93,10 +99,11 @@ export default abstract class CommonSearchCriteria {
      * @param fromValue
      * @param toValue
      * @param field
-     * @param idx
+     * @param idx Deprecated
      * @protected
      */
-    protected buildRangeCriteria(fromValue: any, toValue: any, field: string, idx: number): number {
+    protected buildRangeCriteria(fromValue: any, toValue: any, field: string, idx?: number): number {
+        idx = this.params.length+1;
         if (this.isNotEmpty(fromValue)) {
             this.sql += ` and ${field} >= $${idx++}`;
             this.params.push(fromValue);
@@ -112,10 +119,11 @@ export default abstract class CommonSearchCriteria {
      * 判断字段是否包含*，有*用like查询，没有的用等于条件查询
      * @param text
      * @param field
-     * @param idx
+     * @param idx Deprecated
      * @protected
      */
-    protected buildStarCriteria(text: string, field: string, idx: number ): number {
+    protected buildStarCriteria(text: string, field: string, idx?: number ): number {
+        idx = this.params.length+1;
         if (this.isNotEmpty(text)) {
             if (this.includeStar(text)) {
                 this.sql += ` and ${field} like $${idx++}`;
@@ -136,6 +144,7 @@ export default abstract class CommonSearchCriteria {
      * @protected
      */
     protected buildCriteria(value: any, field: string, idx: number, ): number {
+        idx = this.params.length+1;
         if (this.isNotEmpty(value)) {
             this.sql += ` and ${field} = $${idx++}`;
             this.params.push(value);
@@ -159,6 +168,7 @@ export default abstract class CommonSearchCriteria {
      * @param rowCount
      */
     async paginationQuery(conn: DBConnection, page?: any, rowCount?: any): Promise<PaginationList> {
+        this.buildDynamicQuery();
         let count = await this.queryCount(conn, this.sql, this.params);
         if (count > 0) {
             const rows = rowCount != null ? StringUtils.parseNumber(rowCount, DEFAULT_ROWS_PAGE) : this.rows;
