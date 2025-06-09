@@ -1,6 +1,6 @@
 {
   "name": "@ticatec/node-common-library",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "description": "A set of common classes for node express apps.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
