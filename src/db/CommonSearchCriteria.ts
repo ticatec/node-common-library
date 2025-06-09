@@ -140,10 +140,10 @@ export default abstract class CommonSearchCriteria {
      * 处理等于条件查询
      * @param value
      * @param field
-     * @param idx
+     * @param idx Deprecated
      * @protected
      */
-    protected buildCriteria(value: any, field: string, idx: number, ): number {
+    protected buildCriteria(value: any, field: string, idx?: number): number {
         idx = this.params.length+1;
         if (this.isNotEmpty(value)) {
             this.sql += ` and ${field} = $${idx++}`;
