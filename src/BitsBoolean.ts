@@ -7,9 +7,9 @@ export default abstract class BitsBoolean {
 
 
     /**
-     * 将制定位置的bit位设置true/false
-     * @param pos
-     * @param value
+     * 将指定位置的位设置为true或false
+     * @param pos - 位位置（0-31）
+     * @param value - 要设置的布尔值
      * @protected
      */
     protected setBitValue(pos: number, value: boolean): void {
@@ -24,9 +24,10 @@ export default abstract class BitsBoolean {
     }
 
     /**
-     * 读取指定位的值
-     * @param pos
+     * 读取指定位置的位值
+     * @param pos - 位位置（0-31）
      * @protected
+     * @returns 指定位置的布尔值
      */
     protected getBitValue(pos: number): boolean {
         if (pos < 0 || pos > 31) {
@@ -37,8 +38,9 @@ export default abstract class BitsBoolean {
 
     /**
      * 从布尔数组创建位值
-     * @param boolArray
-     * @protected
+     * @param boolArray - 布尔值数组
+     * @static
+     * @returns 位操作后的数值
      */
     static fromBooleanArray(boolArray: boolean[]): number {
         let result = 0;
@@ -54,6 +56,8 @@ export default abstract class BitsBoolean {
 
     /**
      * 将位值转换为布尔数组
+     * @param length - 输出数组的长度
+     * @returns 布尔值数组
      */
     toBooleanArray(length: number): boolean[] {
         const result: boolean[] = [];

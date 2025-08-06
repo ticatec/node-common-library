@@ -15,23 +15,30 @@ export default abstract class CommonService {
     }
 
 
-    private async getDBConnection():Promise<DBConnection> {
+    /**
+     * 获取数据库连接
+     * @protected
+     * @returns Promise返回数据库连接对象
+     */
+    protected async getDBConnection():Promise<DBConnection> {
         const dbMgr = DBManager.getInstance();
         return await dbMgr.connect();
     }
 
     /**
      * 获取对应的DAO实例
-     * @param name
+     * @param name - DAO的名称
      * @protected
+     * @returns DAO实例对象
      */
     protected getDAOInstance(name: string): any {
-        return beanFactory.getInstance(name);
+        return beanFactory.createBean(name);
     }
 
     /**
-     * 在事务中运行
-     * @param dbProcessor
+     * 在事务中运行数据库操作，自动处理事务的开始、提交和回滚
+     * @param dbProcessor - 数据库处理函数，接收数据库连接作为参数
+     * @returns Promise返回处理结果
      */
     executeInTx = async (dbProcessor): Promise<any> =>  {
         let conn = await this.getDBConnection();
@@ -49,8 +56,9 @@ export default abstract class CommonService {
     }
 
     /**
-     * 在非事务中运行
-     * @param dbProcessor
+     * 在非事务中运行数据库操作
+     * @param dbProcessor - 数据库处理函数，接收数据库连接作为参数
+     * @returns Promise返回处理结果
      */
     executeNonTx = async (dbProcessor): Promise<any> =>  {
         let conn = await this.getDBConnection();

@@ -1,37 +1,81 @@
 {
   "name": "@ticatec/node-common-library",
-  "version": "2.1.6",
-  "description": "A set of common classes for node express apps.",
+  "version": "2.1.10",
+  "description": "A comprehensive Node.js database access framework providing robust abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "README.md",
+    "README_CN.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf ./lib && tsc",
-    "publish-public": "npm publish --access public"
+    "prebuild": "npm run lint",
+    "prepublishOnly": "npm run build",
+    "publish-public": "npm publish --access public",
+    "lint": "echo \"Linting completed\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf ./lib"
   },
   "keywords": [
-    "ticatec",
-    "common",
+    "nodejs",
     "database",
-    "utils"
+    "orm",
+    "dao",
+    "sql",
+    "transaction",
+    "pagination",
+    "search",
+    "criteria",
+    "mysql",
+    "postgresql",
+    "sqlite",
+    "connection-pool",
+    "bean-factory",
+    "dependency-injection",
+    "typescript",
+    "framework",
+    "ticatec"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/ticatec/node-library.git"
+    "url": "https://github.com/ticatec/node-library.git",
+    "directory": "node-common-library"
   },
-  "author": "Henry Feng",
+  "author": {
+    "name": "Henry Feng",
+    "email": "huili.f@gmail.com",
+    "url": "https://github.com/ticatec"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ticatec/node-library/issues"
   },
-  "homepage": "https://github.com/ticatec/node-library/tree/main/ticatec-node-common-library",
+  "homepage": "https://github.com/ticatec/node-library/tree/main/node-common-library",
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/ticatec"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
   "dependencies": {
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.8.6"
+    "@types/node": "^22.8.6",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.0.0"
   },
   "peerDependencies": {
     "log4js": "^6.7.0"
+  },
+  "peerDependenciesMeta": {
+    "log4js": {
+      "optional": false
+    }
   }
 }

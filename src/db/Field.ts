@@ -7,17 +7,20 @@ export enum FieldType {
     Date = 'Date'
 }
 
+/**
+ * 数据库字段接口定义
+ */
 export default interface Field {
     /**
-     * 字段名
+     * 字段名称
      */
     name: string;
     /**
-     * 类型
+     * 字段数据类型
      */
     type: FieldType;
     /**
-     * 长度
+     * 字段最大长度（可选）
      */
     length?: number;
 }

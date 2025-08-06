@@ -1,174 +1,306 @@
-# Database Access Framework
+# @ticatec/node-common-library
 
-This project provides a robust and flexible framework for database access, offering abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building. It is designed to create a consistent data access layer across various database drivers (e.g., PostgreSQL, MySQL).
+[中文文档](README_CN.md) | English
 
-## 📦 Project Structure
+A comprehensive Node.js database access framework providing robust abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building.
+
+[![Version](https://img.shields.io/npm/v/@ticatec/node-common-library)](https://www.npmjs.com/package/@ticatec/node-common-library)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🌟 Features
+
+- **Multi-database Support**: Easily adaptable to different database types via `DBConnection` implementations
+- **Transaction Management**: Supports `beginTransaction()`, `commit()`, and `rollback()` for reliable operations
+- **Paginated Queries**: Built-in support for pagination with `PaginationList`
+- **Dynamic Query Building**: Flexible query construction with `CommonSearchCriteria`
+- **SQL File Execution**: Execute SQL scripts with comment handling and error logging
+- **Field Transformation**: Automatic underscore-to-camelCase conversion and nested object support
+- **Dependency Injection**: Bean factory for managing singleton/prototype instances
+- **Optimistic Locking**: Built-in support for concurrent update conflict handling
+
+## 📦 Installation
 
 ```bash
-.
-├── CommonDAO.ts            # Abstract DAO class with common database operations
-├── BaseDAO.ts              # Interface for basic CRU operations
-├── BaseCRUDDAO.ts          # Extended interface for CRUD with delete functionality
-├── CommonService.ts        # Abstract service layer for transaction management
-├── BatchRecord.ts          # Interface for batch record processing
-├── DBConnection.ts         # Abstract database connection class
-├── BeanFactory.ts          # Singleton factory for managing DAO/Service instances
-└── ...
+npm install @ticatec/node-common-library
 ```
 
-## ✨ Key Features
+## 🚀 Quick Start
 
-- **Multi-database support**: Easily adaptable to different database types via `DBConnection` implementations.
-- **Transaction management**: Supports `beginTransaction()`, `commit()`, and `rollback()` for reliable operations.
-- **Paginated queries**: Built-in support for pagination with `PaginationList`.
-- **Dynamic query building**: Flexible query construction with `CommonSearchCriteria`.
-- **SQL file execution**: Execute SQL scripts with comment handling and error logging.
-- **Field transformation**: Automatic underscore-to-camelCase conversion and nested object support.
-- **Dependency injection**: Bean factory for managing singleton/prototype instances.
+### 1. Basic Setup
 
-## 🛠 Core Components
+```typescript
+import { DBManager, BeanFactory, CommonService, CommonDAO } from '@ticatec/node-common-library';
+import { Scope } from '@ticatec/node-common-library';
 
-### 1. `CommonDAO`
-Abstract base class for Data Access Objects (DAOs), providing utility methods for common database operations.
+// Initialize database manager with your database factory
+const dbManager = DBManager.init(yourDBFactory);
 
-- **Key Methods**:
-    - `genID()`: Generates a 32-bit UUID.
-    - `executeCountSQL()`: Executes a count query and returns the result.
-    - `searchByCriteria()`: Performs paginated queries using `SearchCriteria`.
-    - `quickSearch()`: Executes a quick paginated query with a default row limit.
-    - `convertBooleanFields()`: Converts string/boolean fields (e.g., 'T'/'F' to `true`/`false`).
+// Register DAOs and Services
+const beanFactory = BeanFactory.getInstance();
+beanFactory.register('UserDAO', UserDAO, Scope.Singleton);
+beanFactory.register('UserService', UserService, Scope.Singleton);
+```
 
+### 2. Create a DAO
 
-```ts
-class MyDAO extends CommonDAO {
-  async findByCode(conn: DBConnection, code: string): Promise<any> {
-    return await conn.find(conn, [code]);
-  }
+```typescript
+import { CommonDAO } from '@ticatec/node-common-library';
+import DBConnection from '@ticatec/node-common-library/lib/db/DBConnection';
+
+class UserDAO extends CommonDAO {
+    async createUser(conn: DBConnection, user: User): Promise<number> {
+        const sql = 'INSERT INTO users (name, email) VALUES ($1, $2)';
+        return await conn.insertRecord(sql, [user.name, user.email]);
+    }
+
+    async findUserById(conn: DBConnection, id: number): Promise<User> {
+        const sql = 'SELECT * FROM users WHERE id = $1';
+        return await conn.find(sql, [id]);
+    }
+
+    async updateUser(conn: DBConnection, user: User): Promise<number> {
+        const sql = 'UPDATE users SET name = $1, email = $2 WHERE id = $3';
+        return await conn.updateRecord(sql, [user.name, user.email, user.id]);
+    }
 }
 ```
 
-
-### 2. `CommonService`
-Abstract service layer class for managing database connections and transactions.
-
-- **Key Methods**:
-    - `executeInTx()`: Runs a function within a transaction, handling commit/rollback.
-    - `executeNonTx()`: Runs a function without a transaction.
-    - `getDAOInstance()`: Retrieves DAO instances via the `BeanFactory`.
+### 3. Create a Service
 
 ```typescript
-class MyService extends CommonService {
-  async createItem(data: any): Promise<number> {
-    return this.executeInTx(async (conn: DBConnection) => {
-      const dao = this.getDAOInstance('MyDAO');
-      return await dao.createNew(conn, data);
-    });
-  }
+import { CommonService } from '@ticatec/node-common-library';
+import DBConnection from '@ticatec/node-common-library/lib/db/DBConnection';
+
+class UserService extends CommonService {
+    async createUser(userData: User): Promise<number> {
+        return this.executeInTx(async (conn: DBConnection) => {
+            const userDAO = this.getDAOInstance('UserDAO');
+            return await userDAO.createUser(conn, userData);
+        });
+    }
+
+    async getUser(id: number): Promise<User> {
+        return this.executeNonTx(async (conn: DBConnection) => {
+            const userDAO = this.getDAOInstance('UserDAO');
+            return await userDAO.findUserById(conn, id);
+        });
+    }
 }
 ```
 
-### 3. `BaseDAO` and `BaseCRUDDAO`
-Interfaces defining standard CRUD operations (`createNew`, `update`, `find`) and extended delete functionality (`remove`).
-
-### 4. `BatchRecord`
-Interface for batch processing, allowing records to be processed with error tracking.
+### 4. Paginated Search with SearchCriteria
 
 ```typescript
-const batchRecords: BatchRecords<MyData> = [
-  { recNo: 1, data: { id: "1", name: "Item1" }, error: null },
-  { recNo: 2, data: { id: "2", name: "Item2" }, error: null }
+import { CommonSearchCriteria } from '@ticatec/node-common-library';
+import DBConnection from '@ticatec/node-common-library/lib/db/DBConnection';
+
+class UserSearchCriteria extends CommonSearchCriteria {
+    constructor(criteria?: any) {
+        super(criteria);
+        this.sql = 'SELECT id, name, email, created_at FROM users WHERE 1=1';
+        this.orderBy = 'ORDER BY created_at DESC';
+    }
+
+    protected buildDynamicQuery(): void {
+        if (this.criteria?.name) {
+            this.buildStarCriteria(this.criteria.name, 'name');
+        }
+        if (this.criteria?.email) {
+            this.buildCriteria(this.criteria.email, 'email');
+        }
+        if (this.criteria?.dateFrom || this.criteria?.dateTo) {
+            this.buildRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');
+        }
+    }
+}
+
+// Usage
+const criteria = new UserSearchCriteria({
+    name: 'John*',  // Will use LIKE query
+    email: 'john@example.com',  // Will use exact match
+    page: 1,
+    rows: 20
+});
+
+const result = await criteria.paginationQuery(conn);
+console.log(`Total: ${result.count}, Pages: ${result.pages}`);
+console.log('Users:', result.list);
+```
+
+## 🏗️ Core Components
+
+### CommonDAO
+Abstract base class for Data Access Objects, providing utility methods for common database operations:
+
+- `genID()`: Generates a 32-bit UUID
+- `executeCountSQL()`: Executes count queries
+- `quickSearch()`: Performs paginated queries with default row limits
+- `convertBooleanFields()`: Converts T/F strings to boolean values
+
+### CommonService
+Abstract service layer class for managing database connections and transactions:
+
+- `executeInTx()`: Runs functions within transactions with automatic commit/rollback
+- `executeNonTx()`: Runs functions without transactions
+- `getDAOInstance()`: Retrieves DAO instances via BeanFactory
+
+### DBConnection
+Abstract class defining core database operations:
+
+- Transaction control: `beginTransaction()`, `commit()`, `rollback()`
+- SQL execution: `executeUpdate()`, `insertRecord()`, `updateRecord()`, `deleteRecord()`
+- Query methods: `find()`, `listQuery()`, `executePaginationSQL()`
+- SQL file processing: `executeSQLFile()`
+- Result transformation: `resultToList()` with camelCase conversion
+
+### CommonSearchCriteria
+Base class for building dynamic search queries with pagination:
+
+- `buildDynamicQuery()`: Override to define custom search logic
+- `buildCriteria()`: Builds equality conditions
+- `buildStarCriteria()`: Builds LIKE conditions with wildcard support
+- `buildRangeCriteria()`: Builds range conditions (from/to)
+- `paginationQuery()`: Executes paginated queries
+- `query()`: Executes non-paginated queries
+
+### BeanFactory
+Singleton factory for managing DAO and Service instances:
+
+```typescript
+import { BeanFactory, Scope } from '@ticatec/node-common-library';
+
+const factory = BeanFactory.getInstance();
+factory.register('UserDAO', UserDAO, Scope.Singleton);
+factory.register('TempDAO', TempDAO, Scope.Prototype);
+
+const userDAO = factory.getInstance('UserDAO'); // Same instance
+const tempDAO = factory.createBean('TempDAO'); // New instance each time
+```
+
+## 🔧 Advanced Features
+
+### Batch Processing
+```typescript
+import { BatchRecord, BatchRecords } from '@ticatec/node-common-library';
+
+const batchRecords: BatchRecords<User> = [
+    { recNo: 1, data: { name: 'User1', email: 'user1@test.com' }, error: null },
+    { recNo: 2, data: { name: 'User2', email: 'user2@test.com' }, error: null }
 ];
+
+// Process batch records
+for (const record of batchRecords) {
+    try {
+        await userDAO.createUser(conn, record.data);
+    } catch (error) {
+        record.error = error;
+    }
+}
 ```
 
-### 5. `DBConnection`
-Abstract class defining core database operations, including transaction control, SQL execution, and query handling.
+### Bit Operations
+```typescript
+import BitsBoolean from '@ticatec/node-common-library/lib/BitsBoolean';
 
-- **Key Methods**:
-    - `executeSQL()`, `executeUpdate()`, `insertRecord()`, `updateRecord()`, `deleteRecord()`: SQL execution methods.
-    - `executePaginationSQL()`: Executes paginated queries with `CommonSearchCriteria`.
-    - `executeSQLFile()`: Processes and executes SQL files, removing comments and handling errors.
-    - `resultToList()`: Converts query results to a list of objects with camelCase field names.
+class UserPermissions extends BitsBoolean {
+    constructor(value: number = 0) {
+        super(value);
+    }
 
-[more details](./src/db/README.md)
+    setCanRead(value: boolean): void {
+        this.setBitValue(0, value);
+    }
 
-### 6. `BeanFactory`
-Singleton factory for managing DAO and Service instances with support for `Singleton` and `Prototype` scopes.
+    getCanRead(): boolean {
+        return this.getBitValue(0);
+    }
 
-```ts
-beanFactory.register('MyDAO', MyDAO, Scope.Singleton);
-const dao = beanFactory.getInstance('MyDAO');
+    setCanWrite(value: boolean): void {
+        this.setBitValue(1, value);
+    }
+
+    getCanWrite(): boolean {
+        return this.getBitValue(1);
+    }
+}
 ```
 
-## 📋 Usage Example
+### String Utilities
+```typescript
+import { StringUtils } from '@ticatec/node-common-library';
 
-### Paginated Query with DAO and Service
-
-```ts
-class MySearchCriteria extends CommonSearchCriteria {
-  constructor(code: string, page: number, rows: number) {
-    super(page, rows);
-    this.sql = `SELECT * FROM my_table WHERE code = ?`;
-    this.params = [code];
-    this.orderBy = 'ORDER BY created_at DESC';
-  }
-}
-
-class MyDAO extends CommonDAO {
-  async findItems(conn: DBConnection, code: string): Promise<PaginationList> {
-    const criteria = new MySearchCriteria(code, 1, 10);
-    return await MySearchCriteria.paginationQuery(conn);
-  }
-}
-
-class MyService extends CommonService {
-  async getItems(code: string): Promise<PaginationList> {
-    return this.executeNonTx(async (conn: DBConnection) => {
-      const dao = this.getDAOInstance('MyDAO');
-      return await dao.findItems(conn, code);
-    });
-  }
-}
-
-const service = new MyService();
-const result = await service.getItems("A001");
-console.log(result.list); // Current page data
+const id = StringUtils.genID(); // 32-character UUID without dashes
+const uuid = StringUtils.uuid(); // Standard UUID with dashes
+const isNum = StringUtils.isNumber('123'); // true
+const parsed = StringUtils.parseNumber('abc', 0); // 0 (default value)
 ```
 
-## ✅ Features Summary
+## 📋 API Reference
 
-- **Database Agnostic**: Supports multiple database types through `DBConnection` implementations.
-- **Transaction Support**: Ensures reliable operations with transaction management.
-- **Flexible Queries**: Dynamic query building with pagination and condition support.
-- **SQL File Execution**: Batch execution of SQL scripts with error handling.
-- **Data Transformation**: Automatic field name conversion and nested object support.
-- **Dependency Management**: Bean factory for managing DAO/Service instances.
+### Interfaces
 
-## 📎 Dependencies
+- **BaseDAO<T, K>**: Basic CRUD operations interface
+- **BaseCRUDDAO<T, K>**: Extended CRUD with delete functionality
+- **DBFactory**: Database connection factory interface
+- **Field**: Database field metadata interface
+- **PaginationList**: Paginated query result interface
 
-- `log4js`: For logging.
-- `fs`: For reading SQL files.
-- Other dependencies as required by specific database drivers.
+### Types
 
-## 🚀 Getting Started
+- **PostConstructionFun**: Post-processing function type
+- **BeanLoader**: Bean loading function type
+- **BatchRecord<T>**: Batch processing record interface
+- **BatchRecords<T>**: Array of batch processing records
 
-1. **Implement `DBConnection`** for your database driver (e.g., PostgreSQL, MySQL).
-2. **Extend `CommonDAO`** to create DAOs for specific entities.
-3. **Extend `CommonService`** to manage transactions and DAO access.
-4. **Register DAOs/Services** with `BeanFactory` for dependency injection.
-5. **Use `SearchCriteria`** for dynamic query building and pagination.
+### Enums
 
-## 📝 Notes
+- **Scope**: Bean scope enumeration (Singleton, Prototype)
+- **FieldType**: Database field type enumeration (Text, Number, Date)
 
-- Ensure proper configuration of `log4js` for logging.
-- SQL files should be formatted correctly to avoid parsing issues during `executeSQLFile`.
-- Extend `CommonSearchCriteria` for custom query logic tailored to your application.
+## 🔒 Error Handling
 
-## License
+The library provides specialized exceptions:
 
-MIT License
+```typescript
+import { OptimisticLockException } from '@ticatec/node-common-library';
 
-## Contact
+try {
+    await userDAO.updateUser(conn, user);
+} catch (error) {
+    if (error instanceof OptimisticLockException) {
+        console.log('Concurrent update conflict:', error.entity);
+        // Handle optimistic lock conflict
+    }
+}
+```
 
-huili.f@gmail.com
+## 📝 Dependencies
 
-https://github.com/ticatec/pg-common-library
+- **uuid**: For UUID generation
+- **log4js**: For logging (peer dependency)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Henry Feng** - [huili.f@gmail.com](mailto:huili.f@gmail.com)
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/ticatec/node-library)
+- [NPM Package](https://www.npmjs.com/package/@ticatec/node-common-library)
+- [Issues](https://github.com/ticatec/node-library/issues)
+
+---
+
+**Note**: This library is designed to create a consistent data access layer across various database drivers. Ensure proper configuration of `log4js` for logging and implement your specific `DBConnection` class for your chosen database system.

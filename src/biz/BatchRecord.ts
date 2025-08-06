@@ -1,3 +1,7 @@
+/**
+ * 批量处理记录接口
+ * @template T - 数据类型
+ */
 export default interface BatchRecord<T> {
 
     /**
@@ -6,15 +10,19 @@ export default interface BatchRecord<T> {
     recNo: number;
 
     /**
-     * 数据
+     * 实际数据对象
      */
     data: T;
 
     /**
-     * 处理异常
+     * 处理过程中的错误信息
      */
     error: any;
 
 }
 
+/**
+ * 批量处理记录数组类型定义
+ * @template T - 数据类型
+ */
 export type BatchRecords<T> = Array<BatchRecord<T>>;

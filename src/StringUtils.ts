@@ -1,17 +1,17 @@
 import {v4 as uuidv4} from 'uuid';
 
 /**
- *
- * @param s
- * @returns {boolean}
+ * 判断字符串是否为空（null、undefined或空白字符串）
+ * @param s - 要检查的字符串
+ * @returns 如果为空则返回true
  */
 const isEmpty = (s) => {
     return s == null || (isString(s) && s.trim().length == 0);
 }
 
 /**
- * 生成uuid吗，去除所有的分隔符'-'
- * @returns {string}
+ * 生成32位UUID，去除所有的分隔符'-'
+ * @returns 生成的32位无分隔符的UUID字符串
  */
 const genID = () => {
     return uuidv4().replace(/-/g, '');
@@ -36,32 +36,36 @@ const leftPad = (s, prefix, len) => {
 }
 
 /**
- *
+ * 生成标准格式的UUID（包含分隔符'-'）
+ * @returns 标准格式的UUID字符串
  */
 const uuid = () => {
     return uuidv4();
 }
 
 /**
- *
- * @param s
+ * 判断值是否为字符串类型
+ * @param s - 要检查的值
+ * @returns 如果是字符串类型则返回true
  */
 const isString = (s: any):boolean => {
     return typeof s == 'string'
 }
 
 /**
- *
- * @param s
+ * 判断字符串是否为数字格式
+ * @param s - 要检查的字符串
+ * @returns 如果是数字格式则返回true
  */
 const isNumber = (s: any): boolean => {
     return isString(s) && !isNaN(s)
 }
 
 /**
- *
- * @param s
- * @param defValue
+ * 解析字符串为整数，如果解析失败则返回默认值
+ * @param s - 要解析的字符串或数字
+ * @param defValue - 解析失败时的默认值，默认为0
+ * @returns 解析后的整数值
  */
 const parseNumber = (s: any, defValue: number = 0): number => {
     return typeof s == 'number' ? s : isNumber(s) ? parseInt(s) : defValue;
