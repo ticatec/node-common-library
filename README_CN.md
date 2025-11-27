@@ -144,6 +144,179 @@ console.log('用户列表:', result.list);
 - `executeNonTx()`：在非事务中运行函数
 - `getDAOInstance()`：通过BeanFactory获取DAO实例
 
+#### executeInTx() 方法详解
+
+`executeInTx()` 方法用于在数据库事务中执行操作。它会自动处理事务的开始、提交和回滚，确保数据一致性。
+
+**方法签名：**
+```typescript
+executeInTx(dbProcessor: (conn: DBConnection) => Promise<any>): Promise<any>
+```
+
+**使用场景：**
+- 需要确保多个数据库操作原子性执行
+- 涉及多个表的关联操作
+- 需要在出错时自动回滚的复杂业务逻辑
+
+**基本用法示例：**
+
+```typescript
+// 1. 用户注册 - 需要同时创建用户和初始化配置
+async createUserWithProfile(userData: User, profileData: UserProfile): Promise<number> {
+    return this.executeInTx(async (conn: DBConnection) => {
+        const userDAO = this.getDAOInstance('UserDAO');
+        const profileDAO = this.getDAOInstance('UserProfileDAO');
+        
+        // 创建用户
+        const userId = await userDAO.createUser(conn, userData);
+        
+        // 创建用户配置，关联到新用户
+        profileData.userId = userId;
+        await profileDAO.createProfile(conn, profileData);
+        
+        return userId;
+    });
+}
+
+// 2. 转账操作 - 需要同时更新两个账户余额
+async transferMoney(fromAccountId: number, toAccountId: number, amount: number): Promise<void> {
+    return this.executeInTx(async (conn: DBConnection) => {
+        const accountDAO = this.getDAOInstance('AccountDAO');
+        
+        // 检查源账户余额
+        const fromAccount = await accountDAO.findById(conn, fromAccountId);
+        if (fromAccount.balance < amount) {
+            throw new Error('余额不足');
+        }
+        
+        // 扣除源账户余额
+        await accountDAO.updateBalance(conn, fromAccountId, fromAccount.balance - amount);
+        
+        // 增加目标账户余额  
+        const toAccount = await accountDAO.findById(conn, toAccountId);
+        await accountDAO.updateBalance(conn, toAccountId, toAccount.balance + amount);
+        
+        // 记录转账日志
+        const logDAO = this.getDAOInstance('TransferLogDAO');
+        await logDAO.createLog(conn, {
+            fromAccountId,
+            toAccountId,
+            amount,
+            timestamp: new Date()
+        });
+    });
+}
+
+// 3. 批量操作 - 需要确保全部成功或全部失败
+async batchUpdateUsers(users: User[]): Promise<number[]> {
+    return this.executeInTx(async (conn: DBConnection) => {
+        const userDAO = this.getDAOInstance('UserDAO');
+        const results: number[] = [];
+        
+        for (const user of users) {
+            const result = await userDAO.updateUser(conn, user);
+            results.push(result);
+            
+            // 如果任何一个更新失败，整个事务会回滚
+            if (result === 0) {
+                throw new Error(`更新用户 ${user.id} 失败`);
+            }
+        }
+        
+        return results;
+    });
+}
+```
+
+#### executeNonTx() 方法详解
+
+`executeNonTx()` 方法用于在非事务环境中执行数据库操作。适用于单一查询操作或不需要事务保证的场景。
+
+**方法签名：**
+```typescript
+executeNonTx(dbProcessor: (conn: DBConnection) => Promise<any>): Promise<any>
+```
+
+**使用场景：**
+- 单一的查询操作
+- 不需要事务保证的独立操作
+- 读取数据的场景
+- 性能要求较高的简单操作
+
+**基本用法示例：**
+
+```typescript
+// 1. 简单查询操作
+async getUserById(id: number): Promise<User> {
+    return this.executeNonTx(async (conn: DBConnection) => {
+        const userDAO = this.getDAOInstance('UserDAO');
+        return await userDAO.findById(conn, id);
+    });
+}
+
+// 2. 分页查询
+async getUserList(criteria: any): Promise<PaginationList<User>> {
+    return this.executeNonTx(async (conn: DBConnection) => {
+        const searchCriteria = new UserSearchCriteria(criteria);
+        return await searchCriteria.paginationQuery(conn);
+    });
+}
+
+// 3. 统计查询
+async getUserCount(): Promise<number> {
+    return this.executeNonTx(async (conn: DBConnection) => {
+        const userDAO = this.getDAOInstance('UserDAO');
+        return await userDAO.countAll(conn);
+    });
+}
+
+// 4. 复杂查询（不涉及数据修改）
+async getUserStatistics(startDate: Date, endDate: Date): Promise<any> {
+    return this.executeNonTx(async (conn: DBConnection) => {
+        const sql = `
+            SELECT 
+                COUNT(*) as total_users,
+                COUNT(CASE WHEN status = 'active' THEN 1 END) as active_users,
+                AVG(age) as avg_age
+            FROM users 
+            WHERE created_at BETWEEN $1 AND $2
+        `;
+        return await conn.find(sql, [startDate, endDate]);
+    });
+}
+
+// 5. 单独的更新操作（不需要与其他操作关联）
+async updateUserLastLogin(userId: number): Promise<number> {
+    return this.executeNonTx(async (conn: DBConnection) => {
+        const userDAO = this.getDAOInstance('UserDAO');
+        return await userDAO.updateLastLogin(conn, userId, new Date());
+    });
+}
+```
+
+**使用建议：**
+
+1. **选择原则：**
+   - 涉及多个相关操作时使用 `executeInTx()`
+   - 单一独立操作时使用 `executeNonTx()`
+   - 查询操作优先使用 `executeNonTx()`
+
+2. **错误处理：**
+   ```typescript
+   try {
+       const result = await this.executeInTx(async (conn) => {
+           // 数据库操作
+       });
+   } catch (error) {
+       this.logger.error('事务执行失败', error);
+       throw error;
+   }
+   ```
+
+3. **性能考虑：**
+   - `executeNonTx()` 性能更好，适合高频查询
+   - `executeInTx()` 有事务开销，仅在必要时使用
+
 ### DBConnection
 定义核心数据库操作的抽象类：
 
@@ -299,9 +472,9 @@ try {
 
 ## 🔗 链接
 
-- [GitHub 仓库](https://github.com/ticatec/node-library)
+- [GitHub 仓库](https://github.com/ticatec/node-common-library)
 - [NPM 包](https://www.npmjs.com/package/@ticatec/node-common-library)
-- [问题跟踪](https://github.com/ticatec/node-library/issues)
+- [问题跟踪](https://github.com/ticatec/node-common-library/issues)
 
 ---
 

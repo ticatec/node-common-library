@@ -14,7 +14,7 @@ export default abstract class DBConnection {
     protected readonly logger: Logger;
 
     protected constructor() {
-        this.logger = log4js.getLogger(this.constructor.name);
+        this.logger = log4js.getLogger("SQL");
     }
 
     /**

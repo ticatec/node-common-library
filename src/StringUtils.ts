@@ -1,4 +1,4 @@
-import {v4 as uuidv4} from 'uuid';
+import {v7 as uuidv7} from 'uuid';
 
 /**
  * 判断字符串是否为空（null、undefined或空白字符串）
@@ -14,7 +14,7 @@ const isEmpty = (s) => {
  * @returns 生成的32位无分隔符的UUID字符串
  */
 const genID = () => {
-    return uuidv4().replace(/-/g, '');
+    return uuidv7().replace(/-/g, '');
 }
 
 /**
@@ -40,7 +40,7 @@ const leftPad = (s, prefix, len) => {
  * @returns 标准格式的UUID字符串
  */
 const uuid = () => {
-    return uuidv4();
+    return uuidv7();
 }
 
 /**

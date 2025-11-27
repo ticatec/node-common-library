@@ -1,8 +1,6 @@
 
 import StringUtils from "./StringUtils";
 import DBConnection from "./db/DBConnection";
-import SearchCriteria from "./db/SearchCriteria";
-import PaginationList from "./db/PaginationList";
 import log4js, {Logger} from 'log4js';
 
 export default abstract class CommonDAO {
