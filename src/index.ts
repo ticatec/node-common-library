@@ -3,7 +3,7 @@ import DBConnection from "./db/DBConnection";
 import DBManager from "./db/DBManager";
 import BeanFactory from "./BeanFactory";
 import CommonService from "./CommonService";
-import CommonDAO from "./CommonDAO";
+import CommonDAO, {QuickSearchResult} from "./CommonDAO";
 import {Scope} from "./Scope";
 import StringUtils from "./StringUtils";
 import OptimisticLockException from "./db/OptimisticLockException";
@@ -13,4 +13,4 @@ import {PostConstructionFun} from "./db/DBConnection";
 
 
 export {DBManager, DBConnection, DBFactory, BeanFactory, CommonService, CommonDAO, Scope, StringUtils,
-    OptimisticLockException, PaginationList, SearchCriteria, PostConstructionFun}
+    OptimisticLockException, PaginationList, SearchCriteria, PostConstructionFun, QuickSearchResult}

@@ -89,13 +89,64 @@ export default abstract class DBConnection {
 
     /**
      * 获取count数，默认属性是cc
-     * @param data
-     * @param key
+     * @param data - 包含计数信息的数据对象
+     * @param key - 计数字段的键名，默认为'cc'
      * @protected
+     * @returns 解析后的计数值
      */
     protected getCount(data: any, key: string = 'cc'): number {
-        let s = data == null ? null : data[key];
-        return s == null ? 0 : parseInt(s);
+        const s = data == null ? null : data[key];
+        return s == null ? 0 : parseInt(s, 10);
+    }
+
+    /**
+     * 判断值是否为布尔真值
+     * 支持 1/0 和 T/F 格式，特殊数据库可重写此方法支持其他格式
+     * @param value - 要判断的值
+     * @protected
+     * @returns 是否为真
+     */
+    protected getBoolean(value: any): boolean {
+        if (value === 1 || value === '1' || value === 'T' || value === 't' || value === true) {
+            return true;
+        }
+        if (value === 0 || value === '0' || value === 'F' || value === 'f' || value === false) {
+            return false;
+        }
+        return !!value; // 其他情况使用强制转换
+    }
+
+    /**
+     * 转换指定字段为布尔值
+     * 支持嵌套字段路径，如 'user.isActive'
+     * @param data - 数据对象
+     * @param fields - 需要转换的字段路径数组
+     * @protected
+     */
+    protected convertBooleanFields(data: any, fields: Array<string>): void {
+        if (!data || !fields || fields.length === 0) {
+            return;
+        }
+
+        fields.forEach(fieldPath => {
+            const parts = fieldPath.split('.');
+            let current = data;
+
+            // 遍历到倒数第二层
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
+                if (current[part] == null) {
+                    return; // 路径不存在，跳过
+                }
+                current = current[part];
+            }
+
+            // 最后一层
+            const lastKey = parts[parts.length - 1];
+            if (current && current[lastKey] != null) {
+                current[lastKey] = this.getBoolean(current[lastKey]);
+            }
+        });
     }
 
     /**
@@ -138,30 +189,42 @@ export default abstract class DBConnection {
 
     /**
      * 执行select查询语句，返回数据列表
-     * @param sql
-     * @param params
-     * @param postConstruction
+     * @param sql - SQL查询语句
+     * @param params - SQL参数数组
+     * @param postConstruction - 后处理回调函数
+     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
      */
-    async listQuery(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null): Promise<Array<any>> {
+    async listQuery(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<Array<any>> {
         let result = await this.fetchData(sql, params);
         let list = this.resultToList(result);
-        if (postConstruction) {
-            list.forEach(data => postConstruction(data));
-        }
+        list.forEach(data => {
+            if (booleanFields && booleanFields.length > 0) {
+                this.convertBooleanFields(data, booleanFields);
+            }
+            if (postConstruction) {
+                postConstruction(data);
+            }
+        });
         return list;
     }
 
     /**
      * 查询单条记录，如果有多条，返回第一条
-     * @param sql
-     * @param params
-     * @param postConstruction
+     * @param sql - SQL查询语句
+     * @param params - SQL参数数组
+     * @param postConstruction - 后处理回调函数
+     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
      */
-    async find(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null): Promise<any> {
+    async find(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<any> {
         let result = await this.fetchData(sql, params);
         let row = this.getFirstRow(result);
-        if (row && postConstruction) {
-            postConstruction(row)
+        if (row) {
+            if (booleanFields && booleanFields.length > 0) {
+                this.convertBooleanFields(row, booleanFields);
+            }
+            if (postConstruction) {
+                postConstruction(row)
+            }
         }
         return row;
     }

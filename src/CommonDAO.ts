@@ -3,6 +3,21 @@ import StringUtils from "./StringUtils";
 import DBConnection from "./db/DBConnection";
 import log4js, {Logger} from 'log4js';
 
+/**
+ * 快速搜索结果接口
+ * @template T 列表项的类型
+ */
+export interface QuickSearchResult<T = any> {
+    /**
+     * 结果列表
+     */
+    list: Array<T>;
+    /**
+     * 是否有更多数据
+     */
+    hasMore: boolean;
+}
+
 export default abstract class CommonDAO {
 
     protected readonly logger: Logger;
@@ -22,18 +37,6 @@ export default abstract class CommonDAO {
     }
 
     /**
-     * 获取count数，默认属性是cc
-     * @param data - 包含计数信息的数据对象
-     * @param key - 计数字段的键名，默认为'cc'
-     * @protected
-     * @returns 解析后的计数值
-     */
-    protected getCount(data: any, key: string = 'cc'): number {
-        let s = data == null ? null : data[key];
-        return s == null ? 0 : parseInt(s);
-    }
-
-    /**
      * 执行count语句，返回count值
      * @param conn - 数据库连接对象
      * @param sql - 要执行的count SQL语句
@@ -42,8 +45,10 @@ export default abstract class CommonDAO {
      * @protected
      * @returns Promise返回计数值
      */
-    protected async executeCountSQL(conn: DBConnection, sql: string, params: Array<any>, key: string='cc'): Promise<number> {
-        return this.getCount(await conn.find(sql, params), key);
+    protected async executeCountSQL(conn: DBConnection, sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
+        const data = await conn.find(sql, params);
+        const s = data == null ? null : data[key];
+        return s == null ? 0 : parseInt(s, 10);
     }
 
     /**
@@ -81,28 +86,37 @@ export default abstract class CommonDAO {
 
     /**
      * 快速查询，返回分页记录
+     * @template T - 列表项的类型
      * @param conn - 数据库连接对象
      * @param sql - 查询SQL语句
      * @param params - SQL参数数组，默认为空数组
      * @param pageNo - 页码，默认为1
      * @param rowCount - 每页行数，默认为25
+     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
      * @protected
      * @returns Promise返回包含列表数据和是否有更多数据的对象
      */
-    protected async quickSearch(conn: DBConnection, sql: string,  params: Array<any>=[], pageNo: number = 1, rowCount: number=25): Promise<any> {
+    protected async quickSearch<T = any>(
+        conn: DBConnection,
+        sql: string,
+        params: Array<any> = [],
+        pageNo: number = 1,
+        rowCount: number = 25,
+        booleanFields?: Array<string>
+    ): Promise<QuickSearchResult<T>> {
         let count = await this.executeCountSQL(conn, `select count(*) as cc from (${sql}) a`, params);
         let offset = (pageNo - 1) * rowCount;
         if (count > offset) {
-            let list = await conn.listQuery(`${sql} offset ${offset} limit ${rowCount}`, params);
+            let list = await conn.listQuery(`${sql} offset ${offset} limit ${rowCount}`, params, null, booleanFields);
             return {
-                list,
+                list: list as Array<T>,
                 hasMore: list.length + offset < count
-            }
+            };
         } else {
             return {
                 list: [],
                 hasMore: false
-            }
+            };
         }
     }
 }

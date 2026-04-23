@@ -152,6 +152,29 @@ Abstract class defining core database operations:
 - Query methods: `find()`, `listQuery()`, `executePaginationSQL()`
 - SQL file processing: `executeSQLFile()`
 - Result transformation: `resultToList()` with camelCase conversion
+- **Boolean field conversion**: Automatic conversion of database boolean values (1/0, T/F) to JavaScript booleans
+
+#### Boolean Field Auto-Conversion
+
+Many databases don't support native boolean types. The framework provides automatic conversion:
+
+```typescript
+// Simple boolean fields
+const user = await conn.find(
+    'SELECT * FROM users WHERE id = $1',
+    [id],
+    null,
+    ['isActive', 'isVerified']  // Auto-convert these fields
+);
+
+// Nested boolean fields
+const userWithProfile = await conn.find(
+    'SELECT u.*, p.is_active as "profile.isActive" FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = $1',
+    [id],
+    null,
+    ['profile.isActive']  // Supports nested paths
+);
+```
 
 ### CommonSearchCriteria
 Base class for building dynamic search queries with pagination:
@@ -236,6 +259,33 @@ const parsed = StringUtils.parseNumber('abc', 0); // 0 (default value)
 ```
 
 ## 📋 API Reference
+
+### QuickSearchResult Interface
+
+Type-safe result interface for paginated queries:
+
+```typescript
+import { QuickSearchResult } from '@ticatec/node-common-library';
+
+interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
+class UserDAO extends CommonDAO {
+    async searchUsers(keyword: string): Promise<QuickSearchResult<User>> {
+        const sql = `SELECT * FROM users WHERE name LIKE '%${keyword}%'`;
+        return await this.quickSearch<User>(conn, sql, [], 1, 20);
+    }
+}
+
+// Usage with full type safety
+const result: QuickSearchResult<User> = await userDAO.searchUsers('John');
+result.list.forEach(user => {
+    console.log(user.name); // IDE knows this is a User object
+});
+```
 
 ### Interfaces
 

@@ -1,6 +1,6 @@
 {
   "name": "@ticatec/node-common-library",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "A comprehensive Node.js database access framework providing robust abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

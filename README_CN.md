@@ -325,6 +325,29 @@ async updateUserLastLogin(userId: number): Promise<number> {
 - 查询方法：`find()`、`listQuery()`、`executePaginationSQL()`
 - SQL文件处理：`executeSQLFile()`
 - 结果转换：`resultToList()` 带驼峰命名转换
+- **布尔字段转换**：自动将数据库布尔值（1/0、T/F）转换为 JavaScript 布尔值
+
+#### 布尔字段自动转换
+
+许多数据库不支持原生布尔类型，框架提供自动转换功能：
+
+```typescript
+// 简单的布尔字段
+const user = await conn.find(
+    'SELECT * FROM users WHERE id = $1',
+    [id],
+    null,
+    ['isActive', 'isVerified']  // 自动转换这些字段
+);
+
+// 嵌套的布尔字段
+const userWithProfile = await conn.find(
+    'SELECT u.*, p.is_active as "profile.isActive" FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = $1',
+    [id],
+    null,
+    ['profile.isActive']  // 支持嵌套路径
+);
+```
 
 ### CommonSearchCriteria
 构建动态搜索查询和分页的基类：
@@ -409,6 +432,33 @@ const parsed = StringUtils.parseNumber('abc', 0); // 0（默认值）
 ```
 
 ## 📋 API 参考
+
+### QuickSearchResult 接口
+
+类型安全的分页查询结果接口：
+
+```typescript
+import { QuickSearchResult } from '@ticatec/node-common-library';
+
+interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
+class UserDAO extends CommonDAO {
+    async searchUsers(keyword: string): Promise<QuickSearchResult<User>> {
+        const sql = `SELECT * FROM users WHERE name LIKE '%${keyword}%'`;
+        return await this.quickSearch<User>(conn, sql, [], 1, 20);
+    }
+}
+
+// 使用时完全类型安全
+const result: QuickSearchResult<User> = await userDAO.searchUsers('John');
+result.list.forEach(user => {
+    console.log(user.name); // IDE 知道这是 User 对象
+});
+```
 
 ### 接口
 

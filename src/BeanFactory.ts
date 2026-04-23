@@ -15,7 +15,7 @@ interface BeanClass {
     scope: Scope;
 }
 
-class BeanFactory {
+export class BeanFactory {
     #map: Map<string, BeanClass> = new Map<string, BeanClass>();
 
     /**
@@ -32,9 +32,29 @@ class BeanFactory {
      * 获取Bean实例，根据作用域返回单例或新实例
      * @param name - Bean的名称
      * @returns Bean实例对象
+     * @deprecated 请使用 createBean() 代替
      */
     getInstance(name: string): any {
-        let item:BeanClass = this.#map.get(name);
+        return this.createBean(name);
+    }
+
+    /**
+     * 创建Bean实例
+     * @param name - Bean的名称
+     * @returns Bean实例对象
+     * @deprecated 请使用 createBean() 代替
+     */
+    createInstance(name: string): any {
+        return this.createBean(name);
+    }
+
+    /**
+     * 创建Bean实例，根据作用域返回单例或新实例
+     * @param name - Bean的名称
+     * @returns Bean实例对象
+     */
+    createBean(name: string): any {
+        let item: BeanClass = this.#map.get(name);
         if (item != null) {
             if (item.scope == Scope.Prototype) {
                 return new item.beanClass();
@@ -45,24 +65,6 @@ class BeanFactory {
             }
             return item.beanInstance;
         }
-    }
-
-    /**
-     * 创建Bean实例（getInstance方法的别名）
-     * @param name - Bean的名称
-     * @returns Bean实例对象
-     */
-    createInstance(name: string): any {
-        return this.getInstance(name);
-    }
-
-    /**
-     * 创建Bean实例（getInstance方法的别名）
-     * @param name - Bean的名称
-     * @returns Bean实例对象
-     */
-    createBean(name: string): any {
-        return this.getInstance(name);
     }
 }
 

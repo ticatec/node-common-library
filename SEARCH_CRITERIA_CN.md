@@ -257,6 +257,60 @@ protected getPostConstructor(): any {
 }
 ```
 
+### 3. 布尔字段自动转换
+
+许多数据库（如 PostgreSQL 的早期版本）不支持原生的布尔类型，而是使用字符（T/F）或数字（1/0）来存储布尔值。框架提供了自动转换功能。
+
+#### 使用 setBooleanFields 方法
+
+```typescript
+export default class ProductSearchCriteria extends CommonSearchCriteria {
+    constructor(tenantCode: string, criteria: any) {
+        super(criteria);
+        this.sql = BASE_SQL;
+        this.params = [tenantCode];
+        this.orderBy = `ORDER BY p.name`;
+
+        // 设置需要自动转换为布尔值的字段
+        this.setBooleanFields('isActive', 'isDeleted', 'category.isActive');
+    }
+
+    protected buildDynamicQuery() {
+        // ... 查询逻辑
+    }
+}
+```
+
+**说明**：
+- 支持嵌套字段路径，如 `'user.isActive'`
+- 自动识别并转换：`1/0`, `'1'/'0'`, `'T'/'F'`, `'t'/'f'`, `true/false`
+- 转换后的字段为 JavaScript 原生布尔值
+
+**数据库返回值示例**：
+```javascript
+// 转换前
+{
+    code: 'P001',
+    name: 'iPhone',
+    is_active: 'T',     // 字符串
+    is_deleted: 1,      // 数字
+    category: {
+        is_active: 'F'  // 嵌套字段
+    }
+}
+
+// 转换后
+{
+    code: 'P001',
+    name: 'iPhone',
+    isActive: true,     // boolean
+    isDeleted: true,    // boolean
+    category: {
+        isActive: false  // boolean
+    }
+}
+```
+
 ## 最佳实践
 
 ### 1. 查询性能优化

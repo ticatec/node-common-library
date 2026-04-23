@@ -5,6 +5,7 @@ import log4js, {Logger} from 'log4js';
 
 const DEFAULT_ROWS_PAGE = 25;
 const FIRST_PAGE = 1;
+const ONE_DAY = 24 * 60 *60 * 1000;
 
 export default abstract class CommonSearchCriteria {
 
@@ -15,12 +16,21 @@ export default abstract class CommonSearchCriteria {
     private readonly page: number;
     private readonly rows: number;
     protected criteria: any;
+    protected booleanFields?: Array<string>;
 
     protected constructor(criteria?: any) {
         this.logger = log4js.getLogger(this.constructor.name);
         this.page = StringUtils.parseNumber(criteria?.page, FIRST_PAGE);
         this.rows = StringUtils.parseNumber(criteria?.rows, DEFAULT_ROWS_PAGE);
         this.criteria = criteria;
+    }
+
+    /**
+     * 设置需要转换为布尔值的字段
+     * @param fields - 需要转换的字段路径数组（支持嵌套，如 'user.isActive'）
+     */
+    setBooleanFields(...fields: Array<string>): void {
+        this.booleanFields = fields;
     }
 
     /**
@@ -43,7 +53,7 @@ export default abstract class CommonSearchCriteria {
     private async queryCount(conn: DBConnection, sql: string, params: Array<any>): Promise<number> {
         let countSQL = `select count(*) as cc from (${sql}) a`;
         let result = await conn.find(countSQL, params);
-        return result == null ? 0 : parseInt(result['cc']);
+        return result == null ? 0 : parseInt(result['cc'], 10);
     }
 
     /**
@@ -103,6 +113,10 @@ export default abstract class CommonSearchCriteria {
      */
     protected replaceWildStar(s: string): string {
         return s.replace(/%/g, '\\%').replace(/\*/g, '%');
+    }
+
+    protected getEndOfDay(d: any) {
+        return d == null ? null : new Date(new Date(d).getTime() + ONE_DAY);
     }
 
     /**
@@ -186,7 +200,7 @@ export default abstract class CommonSearchCriteria {
             const offset = (pageNo - 1) * rows;
             let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(rows, offset)} `;
             this.logger.debug(`Total matching records: ${count}, need to read ${rows} records starting from ${offset}`);
-            let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor()) : [];
+            let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor(), this.booleanFields) : [];
             const hasMore = offset + rows < count;
             const pages = (Math.floor((count - 1) / rows)) + 1;
             return {count, hasMore, list, pages}
@@ -201,6 +215,6 @@ export default abstract class CommonSearchCriteria {
      * @returns Promise返回数据对象数组
      */
     async query(conn: DBConnection): Promise<Array<any>> {
-        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params)
+        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params, null, this.booleanFields)
     }
 }
