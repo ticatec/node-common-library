@@ -31,8 +31,8 @@ export default abstract class CommonService {
      * @protected
      * @returns DAO实例对象
      */
-    protected getDAOInstance(name: string): any {
-        return beanFactory.createBean(name);
+    protected getDAOInstance<T>(name: string): T {
+        return beanFactory.createBean<T>(name);
     }
 
     /**

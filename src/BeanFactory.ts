@@ -53,7 +53,7 @@ export class BeanFactory {
      * @param name - Bean的名称
      * @returns Bean实例对象
      */
-    createBean(name: string): any {
+    createBean<T>(name: string): T {
         let item: BeanClass = this.#map.get(name);
         if (item != null) {
             if (item.scope == Scope.Prototype) {

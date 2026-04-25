@@ -18,8 +18,8 @@ export default class DBManager {
      * @returns 数据库管理器实例
      */
     static init(factory: DBFactory): DBManager {
-        logger.debug('初始化数据库管理工厂', factory);
         if (global.DBManagerInstance == null) {
+            logger.debug('初始化数据库管理工厂', factory);
             global.DBManagerInstance = new DBManager(factory)
         }
         return global.DBManagerInstance;
