@@ -2,6 +2,7 @@ import DBConnection from './db/DBConnection.js';
 import DBManager from './db/DBManager.js';
 import ThreadLocal from './ThreadLocal.js';
 import {Propagation} from "./db/Transaction.js";
+import { getLogger, Logger } from './Logger.js';
 
 interface TransactionContext {
     connection: DBConnection;
@@ -10,6 +11,14 @@ interface TransactionContext {
 
 export default class TransactionManager {
     private static threadLocal = new ThreadLocal<TransactionContext>();
+    private static _logger: Logger | null = null;
+
+    private static get logger(): Logger {
+        if (!TransactionManager._logger) {
+            TransactionManager._logger = getLogger('TransactionManager');
+        }
+        return TransactionManager._logger;
+    }
 
     static getCurrentConnection(): DBConnection | undefined {
         return this.threadLocal.get()?.connection;
@@ -17,6 +26,7 @@ export default class TransactionManager {
 
     /**
      * Executes database operations while managing connection lifecycle and transaction state automatically.
+     * Supports REQUIRED, REQUIRES_NEW, and NONE propagation behaviors.
      * @param propagation Transaction propagation behavior.
      * @param fn Business processor function receiving the database connection.
      */
@@ -26,42 +36,50 @@ export default class TransactionManager {
     ): Promise<any> {
         const currentCtx = this.threadLocal.get();
 
-        // If propagation is NONE or REQUIRED without existing context, open a new connection
-        if (propagation === Propagation.NONE ||
-            (propagation === Propagation.REQUIRED && !currentCtx)) {
-            const conn = await DBManager.getInstance().connect();
-            const ctx: TransactionContext = { connection: conn, isTransaction: false };
-
-            // Run within AsyncLocalStorage thread context so DAOs can access the connection
-            return new Promise((resolve, reject) => {
-                this.threadLocal.run(ctx, async () => {
-                    try {
-                        if (propagation !== Propagation.NONE) {
-                            await conn.beginTransaction();
-                            ctx.isTransaction = true;
-                        }
-                        const result = await fn(conn);
-                        if (ctx.isTransaction) {
-                            await conn.commit();
-                        }
-                        resolve(result);
-                    } catch (error) {
-                        if (ctx.isTransaction) {
-                            await conn.rollback();
-                        }
-                        reject(error);
-                    } finally {
-                        await conn.close();
-                    }
-                });
-            });
-        }
-
-        // Reuse active transaction connection if REQUIRED propagation and context exists
+        // 1. Reuse existing transaction connection if REQUIRED propagation and active context exists
         if (propagation === Propagation.REQUIRED && currentCtx) {
             return await fn(currentCtx.connection);
         }
 
-        throw new Error('Unsupported propagation: ' + propagation);
+        // 2. Open a new connection for NONE, REQUIRED (no outer context), or REQUIRES_NEW (new isolated context)
+        if (
+            propagation === Propagation.NONE ||
+            propagation === Propagation.REQUIRES_NEW ||
+            (propagation === Propagation.REQUIRED && !currentCtx)
+        ) {
+            const conn = await DBManager.getInstance().connect();
+            const ctx: TransactionContext = { connection: conn, isTransaction: false };
+
+            return await this.threadLocal.run(ctx, async () => {
+                try {
+                    if (propagation !== Propagation.NONE) {
+                        await conn.beginTransaction();
+                        ctx.isTransaction = true;
+                    }
+                    const result = await fn(conn);
+                    if (ctx.isTransaction) {
+                        await conn.commit();
+                    }
+                    return result;
+                } catch (error) {
+                    if (ctx.isTransaction) {
+                        try {
+                            await conn.rollback();
+                        } catch (rollbackErr) {
+                            this.logger?.error({ rollbackErr }, 'Transaction rollback failed');
+                        }
+                    }
+                    throw error;
+                } finally {
+                    try {
+                        await conn.close();
+                    } catch (closeErr) {
+                        this.logger?.error({ closeErr }, 'Failed to close database connection');
+                    }
+                }
+            });
+        }
+
+        throw new Error('Unsupported transaction propagation: ' + propagation);
     }
 }

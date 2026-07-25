@@ -22,7 +22,7 @@ export default abstract class CommonDAO {
 
     protected readonly logger: Logger;
 
-    protected constructor() {
+    public constructor() {
         this.logger = getLogger(this.constructor.name);
         this.logger.debug(`Created DAO instance: ${this.constructor.name}`);
     }
@@ -51,6 +51,7 @@ export default abstract class CommonDAO {
 
     /**
      * Executes a count query and returns the count value.
+     * Handles NaN gracefully.
      * @param sql - Count SQL query to execute.
      * @param params - Array of SQL query parameters.
      * @param key - Key name of the count column, defaults to 'cc'.
@@ -60,8 +61,11 @@ export default abstract class CommonDAO {
     protected async executeCountSQL(sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
         const conn: DBConnection = await this.getDBConnection();
         const data = await conn.find(sql, params);
-        const s = data == null ? null : data[key];
-        return s == null ? 0 : parseInt(s, 10);
+        if (data == null) return 0;
+        const s = data[key];
+        if (s == null) return 0;
+        const parsed = parseInt(s, 10);
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     /**
@@ -85,19 +89,7 @@ export default abstract class CommonDAO {
     }
 
     /**
-     * Converts T/F string or 1/0 numeric fields in an object into boolean values.
-     * @param data - Target object to transform.
-     * @param fields - Array of field names to convert.
-     * @protected
-     */
-    protected convertBooleanFields(data: any, fields: Array<string>): void {
-        fields.forEach(field => {
-            data[field] = data[field] === 'T' || data[field] === 1;
-        });
-    }
-
-    /**
-     * Quick paginated search query returning list items and a hasMore flag.
+     * Quick paginated search query using driver-independent limit/offset clauses.
      * @template T - Type of items in the result list.
      * @param sql - Base SQL query statement.
      * @param params - Array of SQL query parameters (defaults to empty array).
@@ -118,7 +110,8 @@ export default abstract class CommonDAO {
         let count = await this.executeCountSQL(`select count(*) as cc from (${sql}) a`, params);
         let offset = (pageNo - 1) * rowCount;
         if (count > offset) {
-            let list = await conn.listQuery(`${sql} offset ${offset} limit ${rowCount}`, params, null, booleanFields);
+            let listSQL = `${sql} ${conn.getRowSetLimitClause(rowCount, offset)}`;
+            let list = await conn.listQuery(listSQL, params, null, booleanFields);
             return {
                 list: list as Array<T>,
                 hasMore: list.length + offset < count

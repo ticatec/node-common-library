@@ -7,10 +7,11 @@ export default class ThreadLocal<T extends object> {
     private storage = new AsyncLocalStorage<T>();
 
     /**
-     * Runs a function within the specified context store.
+     * Runs a synchronous or asynchronous function within the specified context store.
+     * Preserves context across all async await operations inside fn.
      */
-    run(value: T, fn: () => void): void {
-        this.storage.run(value, fn);
+    run<R>(value: T, fn: () => R): R {
+        return this.storage.run(value, fn);
     }
 
     /**
@@ -25,6 +26,10 @@ export default class ThreadLocal<T extends object> {
      */
     set(value: T): void {
         const store = this.get();
-        if (store) Object.assign(store, value);
+        if (store) {
+            Object.assign(store, value);
+        } else {
+            console.warn('ThreadLocal.set() called outside of an active thread context (storage.run()). Value ignored.');
+        }
     }
 }

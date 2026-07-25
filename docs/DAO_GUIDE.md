@@ -9,7 +9,7 @@ This guide provides detailed instructions on how to create and maintain Data Acc
 1. [DAO Core Concepts](#dao-core-concepts)
 2. [Creating Your First DAO](#creating-your-first-dao)
 3. [Context Connection Resolution (`getDBConnection`)](#context-connection-resolution-getdbconnection)
-4. [Dynamic Queries & Pagination](#dynamic-queries--pagination)
+4. [Type Safety & Automatic Coercion](#type-safety--automatic-coercion)
 5. [Best Practices](#best-practices)
 
 ---
@@ -28,7 +28,8 @@ export interface User {
 }
 
 export class UserDAO extends CommonDAO {
-  async findById(conn: DBConnection, id: string): Promise<User | null> {
+  async findById(id: string): Promise<User | null> {
+    const conn = await this.getDBConnection();
     return await conn.find<User>('SELECT * FROM users WHERE id = $1', [id]);
   }
 }
@@ -38,7 +39,7 @@ export class UserDAO extends CommonDAO {
 
 ## Context Connection Resolution (`getDBConnection`)
 
-When used within a `@Transaction` annotated service method, DAOs do not need to require an explicit `DBConnection` argument passed through every method. Call `await this.getDBConnection()` to retrieve the connection bound to the surrounding `AsyncLocalStorage` transaction context automatically:
+When used within a `@Transaction` annotated service method, DAOs do not need an explicit `DBConnection` argument passed through every method. Call `await this.getDBConnection()` to retrieve the connection bound to the surrounding `AsyncLocalStorage` transaction context automatically:
 
 ```typescript
 export class UserDAO extends CommonDAO {
@@ -57,8 +58,18 @@ export class UserDAO extends CommonDAO {
 
 ---
 
+## Type Safety & Automatic Coercion
+
+### 1. Generic Query Signatures
+`conn.find<T>(sql, params)` and `conn.listQuery<T>(sql, params)` support generic types returning `Promise<T | null>` and `Promise<Array<T>>`.
+
+### 2. Driver-Independent Pagination (`quickSearch`)
+`quickSearch<T>(sql, params, pageNo, rowCount, booleanFields)` uses driver-independent limit/offset clauses and handles boolean coercion.
+
+---
+
 ## Best Practices
 
-- Keep DAOs stateless so single instances can be shared safely.
+- Keep DAOs stateless so single instances can be shared safely via `beanFactory`.
 - Avoid placing business logic inside DAOs — delegate validation and transaction coordination to the Service layer.
-- Use `genID()` for generating UUID v7 identifiers.
+- Use `genID()` for generating UUID identifiers.

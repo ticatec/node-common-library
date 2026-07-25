@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "lib": ["es2017"],
+    "target": "es2020",
+    "lib": ["es2020"],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -9,6 +9,8 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "forceConsistentCasingInFileNames": true,
     "strict": false,
     "skipLibCheck": true,
@@ -16,7 +18,7 @@
     "types": ["node", "reflect-metadata", "jest"],
     "baseUrl": ".",
     "paths": {
-      "@ticatec/logger-wrapper": ["../logger_warpper/src/index.ts"]
+      "@ticatec/logger-wrapper": ["./node_modules/@ticatec/logger-wrapper", "../logger_warpper/src/index.ts"]
     }
   },
   "include": [

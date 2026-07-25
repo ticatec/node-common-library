@@ -63,16 +63,16 @@ export class BeanFactory {
      * The internal real instance is lazily constructed on first access and reused thereafter.
      *
      * @param name - The name of the Bean.
-     * @returns The Bean proxy instance; returns undefined if not registered.
+     * @returns The Bean proxy instance, or undefined if not registered.
      */
-    createBean<T>(name: string): T {
+    createBean<T>(name: string): T | undefined {
         const cached = this.#proxies.get(name);
         if (cached != null) {
             return cached as T;
         }
         const beanClass = this.#classes.get(name);
         if (beanClass == null) {
-            return undefined as T;
+            return undefined;
         }
         const proxy = createBeanProxy(beanClass, name, this.#creating);
         this.#proxies.set(name, proxy);

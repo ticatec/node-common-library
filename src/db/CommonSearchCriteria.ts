@@ -53,13 +53,25 @@ export default abstract class CommonSearchCriteria {
     private async queryCount(conn: DBConnection, sql: string, params: Array<any>): Promise<number> {
         let countSQL = `select count(*) as cc from (${sql}) a`;
         let result = await conn.find(countSQL, params);
-        return result == null ? 0 : parseInt(result['cc'], 10);
+        if (result == null || result['cc'] == null) return 0;
+        const parsed = parseInt(result['cc'], 10);
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     /**
-     * Post-construction callback invoked after mapping rows to target objects.
+     * Post-construction row processor function invoked after mapping database rows to target objects.
+     * Subclasses can override this method.
      * @protected
      * @returns Post-processor function or null.
+     */
+    protected getPostProcessor(): ((obj: any) => void) | null {
+        return this.getPostConstructor();
+    }
+
+    /**
+     * Backward-compatible alias for getPostProcessor().
+     * @deprecated Override getPostProcessor() in new code instead.
+     * @protected
      */
     protected getPostConstructor(): any {
         return null;
@@ -115,15 +127,33 @@ export default abstract class CommonSearchCriteria {
         return s.replace(/%/g, '\\%').replace(/\*/g, '%');
     }
 
-    protected getEndOfDay(d: any) {
-        return d == null ? null : new Date(new Date(d).getTime() + ONE_DAY);
+    /**
+     * Calculates the start of the following day (00:00:00.000) for exclusive upper-bound date queries (< nextDayStart).
+     * @param d - Input date or date string.
+     * @protected
+     * @returns Next day start Date or null if invalid.
+     */
+    protected getNextDayStart(d: any): Date | null {
+        if (d == null) return null;
+        const dateObj = d instanceof Date ? d : new Date(d);
+        return isNaN(dateObj.getTime()) ? null : new Date(dateObj.getTime() + ONE_DAY);
+    }
+
+    /**
+     * Backward-compatible alias for getNextDayStart().
+     * @deprecated Use getNextDayStart() instead.
+     * @protected
+     */
+    protected getEndOfDay(d: any): Date | null {
+        return this.getNextDayStart(d);
     }
 
     /**
      * Builds range query criteria (from / to boundaries).
-     * @param fromValue - Start boundary value.
-     * @param toValue - End boundary value.
-     * @param field - Field name.
+     * Automatically applies getNextDayStart to toValue if it is a Date instance.
+     * @param fromValue - Start boundary value (inclusive >=).
+     * @param toValue - End boundary value (exclusive <).
+     * @param field - Database column name.
      * @protected
      * @returns Next parameter positional index.
      */
@@ -134,20 +164,26 @@ export default abstract class CommonSearchCriteria {
             this.params.push(fromValue);
         }
         if (this.isNotEmpty(toValue)) {
-            this.sql += ` and ${field} < $${idx++}`;
-            this.params.push(toValue);
+            let actualTo = toValue;
+            if (toValue instanceof Date) {
+                actualTo = this.getNextDayStart(toValue);
+            }
+            if (this.isNotEmpty(actualTo)) {
+                this.sql += ` and ${field} < $${idx++}`;
+                this.params.push(actualTo);
+            }
         }
         return idx;
     }
 
     /**
-     * Builds wildcard query criteria (uses LIKE if * is present, otherwise equals =).
+     * Adds wildcard/LIKE query criteria (uses LIKE if * is present, otherwise equals =).
      * @param text - Search text.
      * @param field - Field name.
      * @protected
      * @returns Next parameter positional index.
      */
-    protected buildStarCriteria(text: string, field: string): number {
+    protected addWildcardCriteria(text: string, field: string): number {
         let idx = this.params.length + 1;
         if (this.isNotEmpty(text)) {
             if (this.includeStar(text)) {
@@ -162,19 +198,37 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * Builds equality criteria (field = value).
+     * Backward-compatible alias for addWildcardCriteria().
+     * @deprecated Use addWildcardCriteria() instead.
+     * @protected
+     */
+    protected buildStarCriteria(text: string, field: string): number {
+        return this.addWildcardCriteria(text, field);
+    }
+
+    /**
+     * Adds equality query criteria (field = value).
      * @param value - Search value.
      * @param field - Field name.
      * @protected
      * @returns Next parameter positional index.
      */
-    protected buildCriteria(value: any, field: string): number {
+    protected addEqualsCriteria(value: any, field: string): number {
         let idx = this.params.length + 1;
         if (this.isNotEmpty(value)) {
             this.sql += ` and ${field} = $${idx++}`;
             this.params.push(value);
         }
         return idx;
+    }
+
+    /**
+     * Backward-compatible alias for addEqualsCriteria().
+     * @deprecated Use addEqualsCriteria() instead.
+     * @protected
+     */
+    protected buildCriteria(value: any, field: string): number {
+        return this.addEqualsCriteria(value, field);
     }
 
     /**
@@ -200,9 +254,9 @@ export default abstract class CommonSearchCriteria {
             const offset = (pageNo - 1) * rows;
             let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(rows, offset)} `;
             this.logger.debug(`Total matching records: ${count}, need to read ${rows} records starting from ${offset}`);
-            let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor(), this.booleanFields) : [];
+            let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostProcessor(), this.booleanFields) : [];
             const hasMore = offset + rows < count;
-            const pages = (Math.floor((count - 1) / rows)) + 1;
+            const pages = Math.ceil(count / rows);
             return {count, hasMore, list, pages};
         } else {
             return {count, hasMore: false, list: [], pages: 0};
@@ -211,10 +265,12 @@ export default abstract class CommonSearchCriteria {
 
     /**
      * Executes an unpaginated query, returning all matching records.
+     * Applies getPostProcessor() post-processing callback consistently.
      * @param conn - Database connection object.
      * @returns Promise resolving to an array of result objects.
      */
     async query(conn: DBConnection): Promise<Array<any>> {
-        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params, null, this.booleanFields);
+        this.buildDynamicQuery();
+        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params, this.getPostProcessor(), this.booleanFields);
     }
 }

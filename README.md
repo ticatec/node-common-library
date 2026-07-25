@@ -61,7 +61,7 @@ import { MyDBFactory } from './MyDBFactory';
 DBManager.init(new MyDBFactory());
 ```
 
-### 2. Register DAOs and Services
+### 3. Register DAOs and Services
 
 The default export `beanFactory` is a singleton. `register(name, Class)` does **not** instantiate the class — `createBean(name)` returns a lazy proxy whose underlying instance is built on first access and reused thereafter.
 
@@ -74,7 +74,7 @@ beanFactory.register('UserDAO', UserDAO);
 beanFactory.register('UserService', UserService);
 ```
 
-### 3. Create a DAO
+### 4. Create a DAO
 
 `CommonDAO` exposes `getDBConnection()` which returns the connection bound to the surrounding `@Transaction` context.
 
@@ -101,7 +101,7 @@ export class UserDAO extends CommonDAO {
 }
 ```
 
-### 4. Create a Repository
+### 5. Create a Repository
 
 Repositories extend `CommonRepository` and encapsulate DAO operations using `getDAOInstance<T>(name)`:
 
@@ -117,7 +117,7 @@ export class UserRepository extends CommonRepository {
 }
 ```
 
-### 5. Create a Service with `@Transaction`
+### 6. Create a Service with `@Transaction`
 
 Service methods are annotated with `@Transaction()`. Services extend `CommonService` and access repositories via `getRepositoryInstance<T>(name)`:
 
@@ -146,7 +146,7 @@ export class UserService extends CommonService {
 }
 ```
 
-### 5. Dynamic Search with `CommonSearchCriteria`
+### 7. Dynamic Search with `CommonSearchCriteria`
 
 ```typescript
 import { CommonSearchCriteria, DBConnection, PaginationList } from '@ticatec/node-common-library';
@@ -160,10 +160,10 @@ class UserSearchCriteria extends CommonSearchCriteria {
 
     protected buildDynamicQuery(): void {
         if (this.criteria?.name) {
-            this.buildStarCriteria(this.criteria.name, 'name');     // '*' → LIKE
+            this.addWildcardCriteria(this.criteria.name, 'name');     // '*' → LIKE
         }
         if (this.criteria?.email) {
-            this.buildCriteria(this.criteria.email, 'email');        // exact match
+            this.addEqualsCriteria(this.criteria.email, 'email');        // exact match
         }
         if (this.criteria?.dateFrom || this.criteria?.dateTo) {
             this.buildRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');

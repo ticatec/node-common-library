@@ -4,12 +4,12 @@ import { getLogger, Logger } from "./Logger.js";
 import TransactionManager from './TransactionManager.js';
 import {Propagation} from "./db/Transaction.js";
 
-type dbProcessor = (conn: DBConnection) => Promise<any>;
+const wrappedPrototypes = new WeakSet<object>();
 
 export default abstract class CommonService {
     protected readonly logger: Logger;
 
-    protected constructor() {
+    public constructor() {
         this.logger = getLogger(this.constructor.name);
         this.logger.debug(`Created Service instance: ${this.constructor.name}`);
         this._applyTransactionAspect();
@@ -31,36 +31,46 @@ export default abstract class CommonService {
      * @param name - Registered Repository bean name.
      */
     protected getRepositoryInstance<T extends object>(name: string): T {
-        return beanFactory.createBean<T>(name);
+        const bean = beanFactory.createBean<T>(name);
+        if (!bean) {
+            throw new Error(`Repository "${name}" is not registered in BeanFactory. Please register it via beanFactory.register('${name}', Class) before usage.`);
+        }
+        return bean;
     }
 
     private _applyTransactionAspect(): void {
-        let proto = Object.getPrototypeOf(this);
-        const methodsToWrap: string[] = [];
+        const targetProto = Object.getPrototypeOf(this);
+        if (wrappedPrototypes.has(targetProto)) {
+            return;
+        }
+
+        let proto = targetProto;
+        const methodMetadata: Map<string, { proto: any, propagation: Propagation }> = new Map();
 
         while (proto && proto !== Object.prototype) {
             const methodNames = Object.getOwnPropertyNames(proto)
-                .filter(name => name !== 'constructor' && typeof proto[name] === 'function');
+                .filter(name => name !== 'constructor' && typeof (proto as any)[name] === 'function');
             for (const name of methodNames) {
                 const isTx = Reflect.getMetadata('transaction:enabled', proto, name);
-                if (isTx && !methodsToWrap.includes(name)) {
-                    methodsToWrap.push(name);
+                if (isTx && !methodMetadata.has(name)) {
+                    const propagation = Reflect.getMetadata('transaction:propagation', proto, name) ?? Propagation.REQUIRED;
+                    methodMetadata.set(name, { proto, propagation });
                 }
             }
             proto = Object.getPrototypeOf(proto);
         }
 
-        for (const name of methodsToWrap) {
-            const originalMethod = this[name as keyof this] as Function;
+        for (const [name, meta] of methodMetadata.entries()) {
+            const originalMethod = targetProto[name] as Function;
             if (typeof originalMethod !== 'function') continue;
-            const propagation = Reflect.getMetadata('transaction:propagation', Object.getPrototypeOf(this), name)
-                || Propagation.REQUIRED;
 
-            (this as any)[name] = async (...args: any[]) => {
-                return await TransactionManager.execute(propagation, async (conn) => {
+            targetProto[name] = async function (this: any, ...args: any[]) {
+                return await TransactionManager.execute(meta.propagation, async () => {
                     return await originalMethod.apply(this, args);
                 });
             };
         }
+
+        wrappedPrototypes.add(targetProto);
     }
 }

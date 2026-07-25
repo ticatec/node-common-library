@@ -4,7 +4,7 @@ import DBFactory from "./DBFactory.js";
 
 export default class DBManager {
 
-    private static instance: DBManager;
+    private static instance?: DBManager;
     private static _logger: Logger | null = null;
 
     private static get logger(): Logger {
@@ -35,10 +35,21 @@ export default class DBManager {
 
     /**
      * Obtains the singleton instance of DBManager.
+     * Throws an Error if init() has not been called.
      * @returns DBManager singleton instance.
      */
     static getInstance(): DBManager {
+        if (!DBManager.instance) {
+            throw new Error('DBManager is not initialized. Please call DBManager.init(factory) first at application startup.');
+        }
         return DBManager.instance;
+    }
+
+    /**
+     * Resets the singleton instance (primarily for testing).
+     */
+    static resetInstance(): void {
+        DBManager.instance = undefined;
     }
 
     /**

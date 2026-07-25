@@ -1,6 +1,6 @@
 {
   "name": "@ticatec/node-common-library",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "A comprehensive Node.js database access framework providing robust abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building.",
   "type": "module",
   "main": "./lib/cjs/index.js",
@@ -90,7 +90,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@ticatec/logger-wrapper": "file:../logger_warpper",
+    "@ticatec/logger-wrapper": "^0.1.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.8.6",
     "jest": "^29.7.0",

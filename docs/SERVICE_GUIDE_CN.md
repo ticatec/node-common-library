@@ -1,12 +1,12 @@
-# Service 层开发指南
+# Service 与 Repository 层开发指南
 
-[English](SERVICE_GUIDE.md) | 中文文档
+English | [中文文档](SERVICE_GUIDE_CN.md)
 
-本文档详细说明如何使用 `@ticatec/node-common-library` 创建和管理业务逻辑层（Service）以及持久化 Repository 层。
+本指南详细说明了如何使用 `@ticatec/node-common-library` 构建和维护 Service 与 Repository 层。
 
-## 📚 4层架构规范 (Architecture)
+## 📚 四层分名词架构
 
-在框架中，为了保证职责清晰与分层收敛，**Service 层不能直接调用 DAO**，必须通过 **Repository** 访问持久化数据：
+为了保证架构清晰与职责单一，**Service 层严禁直接引用 DAO**。Service 必须通过 **Repository** 层访问数据持久化：
 
 ```
 ┌─────────────────────────────────────────┐
@@ -14,107 +14,80 @@
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│            Service Layer                │  业务逻辑 + 声明式事务 (@Transaction)
+│            Service Layer                │  业务逻辑与声明式事务 (@Transaction)
 │  - 继承 CommonService                    │
-│  - 调用 Repository (getRepositoryInstance)│
+│  - 通过 getRepositoryInstance<T>(name)  │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│           Repository Layer              │  领域持久化与数据聚合
+│           Repository Layer              │  领域持久化与 DAO 聚合
 │  - 继承 CommonRepository                │
-│  - 调用 DAO (getDAOInstance)             │
+│  - 通过 getDAOInstance<T>(name) 访问 DAO │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│             DAO Layer                   │  单表 CRUD & 原生 SQL 查询
-│  - 继承 CommonDAO                        │
-│  - 获取连接 (await getDBConnection())    │
+│             DAO Layer                   │  单表数据访问与 SQL 执行
+│  - 继承 CommonDAO                       │
+│  - 获取 conn = await getDBConnection()  │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│             Database                    │  数据存储
+│             Database                    │  数据库存储
 └─────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. 编写 Repository 层 (`CommonRepository`)
+## 1. Repository 层 (`CommonRepository`)
 
-Repository 负责封装一个或多个 DAO 的底层数据操作：
+Repository 封装持久化逻辑并聚合 DAO 操作：
 
 ```typescript
 import { CommonRepository } from '@ticatec/node-common-library';
 import type { UserDAO } from '../dao/UserDAO';
-import type { ProfileDAO } from '../dao/ProfileDAO';
-
-export interface User {
-  id?: string;
-  name: string;
-  email: string;
-  bio?: string;
-}
 
 export class UserRepository extends CommonRepository {
   private userDAO = this.getDAOInstance<UserDAO>('UserDAO');
-  private profileDAO = this.getDAOInstance<ProfileDAO>('ProfileDAO');
 
-  async findUserWithProfile(id: string): Promise<User | null> {
-    const user = await this.userDAO.findById(id);
-    if (!user) return null;
-    const profile = await this.profileDAO.findByUserId(id);
-    return { ...user, bio: profile?.bio };
-  }
-
-  async saveUser(user: User): Promise<string> {
-    const userId = user.id || this.userDAO.genID();
-    await this.userDAO.create({ ...user, id: userId });
-    if (user.bio) {
-      await this.profileDAO.saveProfile(userId, user.bio);
-    }
-    return userId;
+  async findUserById(id: string) {
+    return await this.userDAO.findById(id);
   }
 }
 ```
 
 ---
 
-## 2. 编写 Service 层 (`CommonService`)
+## 2. Service 层 (`CommonService`) 与 `@Transaction`
 
-Service 继承 `CommonService`，只能调用 `getRepositoryInstance<T>(name)` 获取 Repository 代理，配合 `@Transaction` 管理声明式事务：
+Service 继承 `CommonService` 并使用 `@Transaction` 装饰器定义声明式事务边界。
+
+### 事务传播行为 (Propagation)
+
+- **`Propagation.REQUIRED`**（默认）：如果存在外层事务则加入；否则开新连接并启动新事务。
+- **`Propagation.REQUIRES_NEW`**：始终开启独立的新数据库连接和新事务，独立提交或回滚。
+- **`Propagation.NONE`**：在非事务连接上执行数据库操作。
 
 ```typescript
-import { CommonService, Transaction, Propagation, getLogger } from '@ticatec/node-common-library';
-import type { UserRepository, User } from '../repository/UserRepository';
+import { CommonService, Transaction, Propagation } from '@ticatec/node-common-library';
+import type { UserRepository } from '../repository/UserRepository';
 
 export class UserService extends CommonService {
-  private readonly logger = getLogger('UserService');
-
   @Transaction(Propagation.REQUIRED)
-  async registerUser(user: User): Promise<string> {
+  async registerUser(user: any): Promise<string> {
     const userRepo = this.getRepositoryInstance<UserRepository>('UserRepository');
-
-    this.logger.info({ email: user.email }, 'Registering new user');
-
-    const existing = await userRepo.findUserWithProfile(user.id || '');
-    if (existing) {
-      throw new Error('User already exists');
-    }
-
     return await userRepo.saveUser(user);
   }
 
-  @Transaction(Propagation.SUPPORTS)
-  async getUser(id: string): Promise<User | null> {
-    const userRepo = this.getRepositoryInstance<UserRepository>('UserRepository');
-    return await userRepo.findUserWithProfile(id);
+  @Transaction(Propagation.REQUIRES_NEW)
+  async logAudit(action: string): Promise<void> {
+    // 独立事务：即使外层事务回滚，审计日志也能独立提交
   }
 }
 ```
 
 ---
 
-## 🔑 核心规则总结
+## 🔑 核心规则与保护机制
 
-1. **Service 严禁直接调用 DAO**：Service 中使用 `this.getRepositoryInstance<T>(name)` 获取 Repository。
-2. **Repository 调用 DAO**：Repository 继承 `CommonRepository`，使用 `this.getDAOInstance<T>(name)` 获取 DAO。
-3. **DAO 执行 SQL**：DAO 继承 `CommonDAO`，使用 `await this.getDBConnection()` 自动获取事务上下文中的连接。
+1. **Bean 注册检查**：`getRepositoryInstance` 与 `getDAOInstance` 会强校验 Bean 是否已在 `beanFactory` 中注册，未注册时会抛出明确异常。
+2. **分层约束**：Service 层通过 `getRepositoryInstance` 获取 Repository，禁止直接调用 DAO。

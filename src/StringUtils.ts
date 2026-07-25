@@ -1,4 +1,4 @@
-import {v7 as uuidv7} from 'uuid';
+import crypto from 'crypto';
 
 /**
  * Checks if a string is empty (null, undefined, or whitespace only).
@@ -14,7 +14,7 @@ const isEmpty = (s: unknown): boolean => {
  * @returns 32-character unhyphenated UUID string.
  */
 const genID = (): string => {
-    return uuidv7().replace(/-/g, '');
+    return uuid().replace(/-/g, '');
 };
 
 /**
@@ -34,10 +34,19 @@ const leftPad = (s: string, prefix: string, len: number): string => {
 
 /**
  * Generates a standard UUID string (including hyphens).
+ * Uses native crypto.randomUUID().
  * @returns Standard UUID string.
  */
 const uuid = (): string => {
-    return uuidv7();
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    // Fallback pseudo-random UUID generator for older runtimes
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
 };
 
 /**
@@ -66,10 +75,11 @@ const isNumber = (s: unknown): boolean => {
  */
 const parseNumber = (s: unknown, defValue: number = 0): number => {
     if (typeof s === 'number') {
-        return s;
+        return isNaN(s) ? defValue : Math.floor(s);
     }
     if (isNumber(s)) {
-        return parseInt(s as string, 10);
+        const parsed = parseInt(s as string, 10);
+        return isNaN(parsed) ? defValue : parsed;
     }
     return defValue;
 };

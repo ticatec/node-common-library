@@ -1,8 +1,20 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2020",
     "moduleResolution": "node",
-    "outDir": "./lib/cjs"
-  }
+    "declaration": true,
+    "outDir": "./lib/cjs",
+    "rootDir": "src"
+  },
+  "lib": ["es2020"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/__tests__/**/*"
+  ]
 }

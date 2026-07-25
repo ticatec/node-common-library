@@ -8,11 +8,16 @@ type PostConstructionFun = (obj: any) => void;
 
 export {PostConstructionFun};
 
+export interface ExecuteSQLFileOptions {
+    stopOnError?: boolean;
+    throwOnError?: boolean;
+}
+
 export default abstract class DBConnection {
 
     protected readonly logger: Logger;
 
-    protected constructor() {
+    public constructor() {
         this.logger = getLogger("SQL");
     }
 
@@ -93,8 +98,11 @@ export default abstract class DBConnection {
      * @returns Parsed integer count.
      */
     protected getCount(data: any, key: string = 'cc'): number {
-        const s = data == null ? null : data[key];
-        return s == null ? 0 : parseInt(s, 10);
+        if (data == null) return 0;
+        const s = data[key];
+        if (s == null) return 0;
+        const parsed = parseInt(s, 10);
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     /**
@@ -119,9 +127,8 @@ export default abstract class DBConnection {
      * Supports nested field paths (e.g. 'user.isActive').
      * @param data - Data object.
      * @param fields - Array of field property paths.
-     * @protected
      */
-    protected convertBooleanFields(data: any, fields: Array<string>): void {
+    public convertBooleanFields(data: any, fields: Array<string>): void {
         if (!data || !fields || fields.length === 0) {
             return;
         }
@@ -182,12 +189,13 @@ export default abstract class DBConnection {
 
     /**
      * Executes a SELECT query returning a list of mapped objects.
+     * @template T - Result item type.
      * @param sql - SQL query string.
      * @param params - Parameter array.
      * @param postConstruction - Optional post-construction callback per object.
      * @param booleanFields - Field names to coerce to boolean values.
      */
-    async listQuery(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<Array<any>> {
+    async listQuery<T = any>(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<Array<T>> {
         let result = await this.fetchData(sql, params);
         let list = this.resultToList(result);
         list.forEach(data => {
@@ -198,17 +206,18 @@ export default abstract class DBConnection {
                 postConstruction(data);
             }
         });
-        return list;
+        return list as Array<T>;
     }
 
     /**
      * Queries a single record. Returns the first record if multiple match.
+     * @template T - Result record type.
      * @param sql - SQL query string.
      * @param params - Parameter array.
      * @param postConstruction - Optional post-construction callback for the mapped object.
      * @param booleanFields - Field names to coerce to boolean values.
      */
-    async find(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<any> {
+    async find<T = any>(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<T | null> {
         let result = await this.fetchData(sql, params);
         let row = this.getFirstRow(result);
         if (row) {
@@ -219,11 +228,13 @@ export default abstract class DBConnection {
                 postConstruction(row);
             }
         }
-        return row;
+        return (row ?? null) as T | null;
     }
 
     /**
      * Reads a SQL file, strips comments, and splits into individual SQL statements.
+     * Note: This is a lightweight script splitter for standard DDL/DML migrations and does not parse
+     * complex PL/SQL blocks or escaped semicolons inside string literals.
      * @param file - File path.
      * @private
      */
@@ -246,19 +257,31 @@ export default abstract class DBConnection {
 
     /**
      * Executes a SQL file containing multiple statements.
+     * By default stops and throws an Error on statement failure to protect database integrity.
      * @param file - SQL file path.
+     * @param options - Execution control options (stopOnError, throwOnError).
      * @returns Promise resolving to true if any error occurred.
      */
-    async executeSQLFile(file: string): Promise<boolean> {
+    async executeSQLFile(
+        file: string,
+        options?: ExecuteSQLFileOptions
+    ): Promise<boolean> {
+        const { stopOnError = true, throwOnError = true } = options ?? {};
         let hasError = false;
         const sqlStatements = this.loadAndSplitSQL(file);
         for (const statement of sqlStatements) {
             try {
-                this.logger.debug({ sql: statement }, 'execute sql statement');
+                this.logger.debug({ sql: statement }, 'Executing SQL statement');
                 await this.executeSQL(statement);
-            } catch (error) {
+            } catch (error: any) {
                 hasError = true;
-                this.logger.error({ error, sql: statement }, 'execute sql statement with error');
+                this.logger.error({ error, sql: statement }, 'Failed executing SQL statement');
+                if (stopOnError) {
+                    if (throwOnError) {
+                        throw new Error(`Execution failed for SQL statement in file ${file}: "${statement}". Error: ${error?.message || error}`);
+                    }
+                    break;
+                }
             }
         }
         return hasError;
@@ -332,12 +355,23 @@ export default abstract class DBConnection {
 
     /**
      * Builds field name mapping map.
+     * Default implementation maps raw field names to camelCase property names (e.g. user_name -> userName).
+     * Subclasses can override for custom mapping.
      * @param fields - Array of field metadata.
      * @protected
      * @returns Field mapping Map.
      */
     protected buildFieldsMap(fields: Array<any>): Map<string, string> {
-        return null;
+        const map = new Map<string, string>();
+        if (Array.isArray(fields)) {
+            fields.forEach(f => {
+                const rawName = typeof f === 'string' ? f : f?.name;
+                if (rawName) {
+                    map.set(rawName, this.toCamel(rawName));
+                }
+            });
+        }
+        return map;
     }
 
     /**
@@ -369,12 +403,19 @@ export default abstract class DBConnection {
      */
     protected resultToList(result: any): Array<any> {
         let list: Array<any> = [];
+        if (!result || !result.rows) {
+            return list;
+        }
         let fields = this.buildFieldsMap(result.fields);
-        result.rows.forEach(row => {
+        result.rows.forEach((row: any) => {
             let obj = {};
-            fields.forEach((value, key) => {
-                this.setNestObj(obj, value, row[key]);
-            });
+            if (fields && fields.size > 0) {
+                fields.forEach((value, key) => {
+                    this.setNestObj(obj, value, row[key] ?? row[value]);
+                });
+            } else if (typeof row === 'object' && row !== null) {
+                obj = { ...row };
+            }
             list.push(obj);
         });
         return list;

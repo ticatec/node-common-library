@@ -5,7 +5,7 @@ export default abstract class CommonRepository {
 
     protected readonly logger: Logger;
 
-    protected constructor() {
+    public constructor() {
         this.logger = getLogger(this.constructor.name);
         this.logger.debug(`Create repository instance:${this.constructor.name}`);
     }
@@ -15,6 +15,10 @@ export default abstract class CommonRepository {
      * @param name - Registered DAO bean name.
      */
     protected getDAOInstance<T extends object>(name: string): T {
-        return beanFactory.createBean<T>(name);
+        const bean = beanFactory.createBean<T>(name);
+        if (!bean) {
+            throw new Error(`DAO "${name}" is not registered in BeanFactory. Please register it via beanFactory.register('${name}', Class) before usage.`);
+        }
+        return bean;
     }
 }

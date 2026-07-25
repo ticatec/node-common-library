@@ -11,10 +11,8 @@ export enum Propagation {
  * @param propagation Transaction propagation behavior.
  */
 export function Transaction(propagation: Propagation = Propagation.REQUIRED) {
-    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // Save propagation level in reflect metadata
+    return function (target: any, propertyKey: string, descriptor?: PropertyDescriptor) {
         Reflect.defineMetadata('transaction:propagation', propagation, target, propertyKey);
-        // Mark method as transaction-enabled
         Reflect.defineMetadata('transaction:enabled', true, target, propertyKey);
     };
 }

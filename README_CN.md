@@ -61,9 +61,9 @@ import { MyDBFactory } from './MyDBFactory';
 DBManager.init(new MyDBFactory());
 ```
 
-### 2. 注册 DAO 和 Service
+### 3. 注册 DAO 与 Service
 
-默认导出的 `beanFactory` 是单例。`register(name, Class)` **不会**立即实例化 —— `createBean(name)` 返回的是一个懒加载代理，真实实例在首次访问时才构造，之后复用。
+默认导出的 `beanFactory` 为全局单例。`register(name, Class)` **不会**立即实例化 —— `createBean(name)` 返回一个懒加载代理。
 
 ```typescript
 import { beanFactory } from '@ticatec/node-common-library';
@@ -74,9 +74,9 @@ beanFactory.register('UserDAO', UserDAO);
 beanFactory.register('UserService', UserService);
 ```
 
-### 3. 创建 DAO
+### 4. 创建 DAO
 
-`CommonDAO` 提供了 `getDBConnection()`，它会返回由外层 `@Transaction` 上下文绑定的连接。
+`CommonDAO` 暴露 `getDBConnection()`，返回绑定在周围 `@Transaction` 上下文中的数据库连接。
 
 ```typescript
 import { CommonDAO, DBConnection } from '@ticatec/node-common-library';
@@ -101,9 +101,9 @@ export class UserDAO extends CommonDAO {
 }
 ```
 
-### 4. 创建 Repository
+### 5. 创建 Repository
 
-Repository 继承 `CommonRepository`，使用 `getDAOInstance<T>(name)` 封装底层 DAO 操作：
+Repository 继承 `CommonRepository`，通过 `getDAOInstance<T>(name)` 封装 DAO 操作：
 
 ```typescript
 import { CommonRepository } from '@ticatec/node-common-library';
@@ -117,9 +117,9 @@ export class UserRepository extends CommonRepository {
 }
 ```
 
-### 5. 创建带 `@Transaction` 的 Service
+### 6. 创建带有 `@Transaction` 的 Service
 
-Service 继承 `CommonService`，使用 `@Transaction()` 标记事务边界，并通过 `getRepositoryInstance<T>(name)` 访问 Repository：
+Service 方法使用 `@Transaction()` 装饰器标记。Service 继承 `CommonService` 并通过 `getRepositoryInstance<T>(name)` 访问 Repository：
 
 ```typescript
 import { CommonService, Transaction, Propagation } from '@ticatec/node-common-library';
@@ -160,10 +160,10 @@ class UserSearchCriteria extends CommonSearchCriteria {
 
     protected buildDynamicQuery(): void {
         if (this.criteria?.name) {
-            this.buildStarCriteria(this.criteria.name, 'name');     // '*' → LIKE
+            this.addWildcardCriteria(this.criteria.name, 'name');     // '*' → LIKE
         }
         if (this.criteria?.email) {
-            this.buildCriteria(this.criteria.email, 'email');       // 精确匹配
+            this.addEqualsCriteria(this.criteria.email, 'email');        // exact match
         }
         if (this.criteria?.dateFrom || this.criteria?.dateTo) {
             this.buildRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');

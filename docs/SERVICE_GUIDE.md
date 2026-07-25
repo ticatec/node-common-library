@@ -80,9 +80,15 @@ export class UserRepository extends CommonRepository {
 
 ---
 
-## 2. Service Layer (`CommonService`)
+## 2. Service Layer (`CommonService`) & `@Transaction`
 
-Services extend `CommonService` and invoke `getRepositoryInstance<T>(name)` to access Repositories, using `@Transaction` for declarative transaction boundaries:
+Services extend `CommonService` and invoke `getRepositoryInstance<T>(name)` to access Repositories, using `@Transaction` for declarative transaction boundaries.
+
+### Transaction Propagation Behaviors
+
+- **`Propagation.REQUIRED`** (Default): Joins the active outer transaction if present; otherwise creates a new database connection and starts a new transaction.
+- **`Propagation.REQUIRES_NEW`**: Always creates a new database connection, starts an independent transaction, and runs inside an isolated context (shadowing any outer transaction).
+- **`Propagation.NONE`**: Executes database operations on a non-transactional connection.
 
 ```typescript
 import { CommonService, Transaction, Propagation, getLogger } from '@ticatec/node-common-library';
@@ -104,13 +110,19 @@ export class UserService extends CommonService {
 
     return await userRepo.saveUser(user);
   }
+
+  @Transaction(Propagation.REQUIRES_NEW)
+  async logAuditRecord(action: string, payload: any): Promise<void> {
+    // Independent transaction: commits even if outer transaction rolls back
+  }
 }
 ```
 
 ---
 
-## 🔑 Core Rules
+## 🔑 Core Rules & Safeguards
 
-1. **Service Layer**: Calls `this.getRepositoryInstance<T>(name)`. Direct DAO access is disabled.
-2. **Repository Layer**: Extends `CommonRepository` and calls `this.getDAOInstance<T>(name)`.
-3. **DAO Layer**: Extends `CommonDAO` and resolves `await this.getDBConnection()`.
+1. **Registration Requirement**: `getRepositoryInstance<T>(name)` and `getDAOInstance<T>(name)` check if the requested Bean is registered in `beanFactory`. If unregistered, an explicit `Error` is thrown (`Repository/DAO "X" is not registered in BeanFactory...`).
+2. **Service Layer**: Calls `this.getRepositoryInstance<T>(name)`. Direct DAO access is disabled.
+3. **Repository Layer**: Extends `CommonRepository` and calls `this.getDAOInstance<T>(name)`.
+4. **DAO Layer**: Extends `CommonDAO` and resolves `await this.getDBConnection()`.

@@ -7,6 +7,12 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts'
   ],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }]
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid)/)'
+  ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },

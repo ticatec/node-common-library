@@ -4,15 +4,15 @@
 
 ## Overview
 
-This is a TypeScript-based dynamic conditional pagination query framework that provides flexible database querying and pagination functionality. By inheriting the abstract base class `SearchCriteria`, you can quickly build pagination query functionality with dynamic query conditions.
+This is a TypeScript-based dynamic conditional pagination query framework that provides flexible database querying and pagination functionality. By inheriting the abstract base class `CommonSearchCriteria` (or its alias `SearchCriteria`), you can quickly build pagination query functionality with dynamic query conditions.
 
 ## Core Features
 
-- **Dynamic Query Condition Building**: Supports multiple query types including exact matching, range queries, fuzzy matching, etc.
+- **Dynamic Query Condition Building**: Supports multiple query types including exact matching, range queries, wildcard matching, etc.
 - **Pagination Query**: Built-in pagination logic with support for custom records per page
-- **Wildcard Support**: Supports `*` wildcard conversion to SQL `%` wildcard
+- **Wildcard Support**: Supports `*` wildcard conversion to SQL `%` wildcard with automatic escaping
 - **SQL Injection Protection**: Uses parameterized queries to prevent SQL injection
-- **Flexible Extension**: Implement custom query logic by overriding methods
+- **Flexible Extension**: Implement custom query logic by overriding methods and post-processors
 
 ## Architecture Design
 
@@ -48,37 +48,39 @@ protected buildDynamicQuery(): void
 
 #### 2. Query Building Methods
 
-##### buildCriteria(value, field)
+##### addEqualsCriteria(value, field) / buildCriteria(value, field)
 ```typescript
-protected buildCriteria(value: any, field: string): number
+protected addEqualsCriteria(value: any, field: string): number
 ```
-- **Purpose**: Build exact match query conditions
+- **Purpose**: Build exact equality match query conditions (`field = $N`)
 - **Parameters**:
     - `value`: Query value
     - `field`: Database field name
 - **Returns**: Next parameter index
-- **Example**: `buildCriteria(this.criteria.status, 'p.status')`
+- **Example**: `this.addEqualsCriteria(this.criteria.status, 'p.status')`
+- **Legacy Alias**: `buildCriteria(value, field)`
 
-##### buildStarCriteria(text, field)
+##### addWildcardCriteria(text, field) / buildStarCriteria(text, field)
 ```typescript
-protected buildStarCriteria(text: string, field: string): number
+protected addWildcardCriteria(text: string, field: string): number
 ```
 - **Purpose**: Build query conditions with wildcard support
 - **Logic**:
-    - Contains `*` → Use `LIKE` query
-    - Does not contain `*` → Use exact match query
-- **Example**: `buildStarCriteria(this.criteria.name, 'p.name')`
+    - Contains `*` → Use `LIKE` query (`field LIKE $N`)
+    - Does not contain `*` → Use exact match query (`field = $N`)
+- **Example**: `this.addWildcardCriteria(this.criteria.name, 'p.name')`
+- **Legacy Alias**: `buildStarCriteria(text, field)`
 
 ##### buildRangeCriteria(fromValue, toValue, field)
 ```typescript
 protected buildRangeCriteria(fromValue: any, toValue: any, field: string): number
 ```
-- **Purpose**: Build range query conditions
+- **Purpose**: Build range query conditions (`field >= $N AND field < $M`)
 - **Parameters**:
-    - `fromValue`: Start value (inclusive)
-    - `toValue`: End value (exclusive)
+    - `fromValue`: Start value (inclusive >=)
+    - `toValue`: End value (exclusive <). Automatically calls `getNextDayStart(toValue)` when `toValue` is a Date instance.
     - `field`: Database field name
-- **Example**: `buildRangeCriteria(startDate, endDate, 'created_at')`
+- **Example**: `this.buildRangeCriteria(startDate, endDate, 'created_at')`
 
 #### 3. Query Execution Methods
 
@@ -104,7 +106,21 @@ async query(conn: DBConnection): Promise<Array<any>>
 ```
 - **Purpose**: Execute non-paginated query, returns all records matching the criteria
 
-#### 4. Utility Methods
+#### 4. Utility & Processor Methods
+
+##### getPostProcessor() / getPostConstructor()
+```typescript
+protected getPostProcessor(): ((obj: any) => void) | null
+```
+- **Purpose**: Returns a callback for custom post-processing mapped object rows after raw query execution.
+- **Legacy Alias**: `getPostConstructor()`
+
+##### getNextDayStart(d) / getEndOfDay(d)
+```typescript
+protected getNextDayStart(d: any): Date | null
+```
+- **Purpose**: Calculates the start of the following day (00:00:00.000) for exclusive upper-bound range queries (`field < nextDayStart`).
+- **Legacy Alias**: `getEndOfDay(d)`
 
 ##### isNotEmpty(s)
 ```typescript
@@ -144,12 +160,11 @@ export default class ProductSearchCriteria extends CommonSearchCriteria {
 
     protected buildDynamicQuery() {
         // Product name: supports wildcard query
-        this.buildStarCriteria(this.criteria.name, 'p.name');
+        this.addWildcardCriteria(this.criteria.name, 'p.name');
         
         // Product status: exact match query
-        this.buildCriteria(this.criteria.status, 'p.status');
+        this.addEqualsCriteria(this.criteria.status, 'p.status');
         
-        // Category path: custom LIKE query
         if (this.criteria.categoryPath) {
             this.params.push(`${this.criteria.categoryPath}%`);
             this.sql += ` AND pc.query_path LIKE $${this.params.length}`;
@@ -194,16 +209,16 @@ const allData = await searchCriteria.query(dbConnection);
 
 ### 1. Exact Match Query
 ```typescript
-this.buildCriteria(value, 'field_name');
+this.addEqualsCriteria(value, 'field_name');
 // Generates: AND field_name = $n
 ```
 
 ### 2. Wildcard Query
 ```typescript
-this.buildStarCriteria('text*', 'field_name');
+this.addWildcardCriteria('text*', 'field_name');
 // Generates: AND field_name LIKE $n (parameter value: 'text%')
 
-this.buildStarCriteria('exact', 'field_name');
+this.addWildcardCriteria('exact', 'field_name');
 // Generates: AND field_name = $n (parameter value: 'exact')
 ```
 
@@ -213,57 +228,22 @@ this.buildRangeCriteria(startValue, endValue, 'field_name');
 // Generates: AND field_name >= $n AND field_name < $m
 ```
 
-### 4. Custom Query
-```typescript
-if (this.criteria.customField) {
-    this.params.push(this.criteria.customField);
-    this.sql += ` AND custom_condition = $${this.params.length}`;
-}
-```
-
 ## Advanced Usage
 
-### 1. Complex Query Conditions
+### 1. Custom Post-processing
 
 ```typescript
-protected buildDynamicQuery() {
-    // Multi-field OR query
-    if (this.criteria.keyword) {
-        this.params.push(`%${this.criteria.keyword}%`);
-        const paramIndex = this.params.length;
-        this.sql += ` AND (p.name LIKE $${paramIndex} OR p.description LIKE $${paramIndex})`;
-    }
-    
-    // IN query
-    if (this.criteria.statuses && this.criteria.statuses.length > 0) {
-        const placeholders = this.criteria.statuses.map((_, index) => {
-            this.params.push(this.criteria.statuses[index]);
-            return `$${this.params.length}`;
-        }).join(',');
-        this.sql += ` AND p.status IN (${placeholders})`;
-    }
-}
-```
-
-### 2. Custom Post-processing
-
-```typescript
-protected getPostConstructor(): any {
+protected getPostProcessor(): ((row: any) => void) | null {
     return (row: any) => {
         // Data transformation logic
         if (row.created_at) {
             row.created_at = new Date(row.created_at);
         }
-        return row;
     };
 }
 ```
 
-### 3. Boolean Field Auto-Conversion
-
-Many databases (such as older PostgreSQL versions) do not support native boolean types and instead use characters (T/F) or numbers (1/0) to store boolean values. The framework provides automatic conversion functionality.
-
-#### Using setBooleanFields Method
+### 2. Boolean Field Auto-Conversion
 
 ```typescript
 export default class ProductSearchCriteria extends CommonSearchCriteria {
@@ -275,123 +255,6 @@ export default class ProductSearchCriteria extends CommonSearchCriteria {
 
         // Set fields that need automatic boolean conversion
         this.setBooleanFields('isActive', 'isDeleted', 'category.isActive');
-    }
-
-    protected buildDynamicQuery() {
-        // ... query logic
-    }
-}
-```
-
-**Features**:
-- Supports nested field paths, e.g., `'user.isActive'`
-- Automatically recognizes and converts: `1/0`, `'1'/'0'`, `'T'/'F'`, `'t'/'f'`, `true/false`
-- Converted fields become native JavaScript boolean values
-
-**Database Return Value Example**:
-```javascript
-// Before conversion
-{
-    code: 'P001',
-    name: 'iPhone',
-    is_active: 'T',     // string
-    is_deleted: 1,      // number
-    category: {
-        is_active: 'F'  // nested field
-    }
-}
-
-// After conversion
-{
-    code: 'P001',
-    name: 'iPhone',
-    isActive: true,     // boolean
-    isDeleted: true,    // boolean
-    category: {
-        isActive: false  // boolean
-    }
-}
-```
-
-## Best Practices
-
-### 1. Query Performance Optimization
-- Create indexes on fields used in WHERE conditions
-- Avoid full table scans on large tables
-- Set reasonable pagination sizes
-
-### 2. Security Considerations
-- Always use parameterized queries to prevent SQL injection
-- Validate input parameter validity
-- Perform permission checks on sensitive fields
-
-### 3. Code Organization
-- Encapsulate complex query logic into separate methods
-- Use constants to define SQL templates
-- Add appropriate comments and logging
-
-### 4. Error Handling
-```typescript
-async paginationQuery(conn: DBConnection): Promise<PaginationList> {
-    try {
-        return await super.paginationQuery(conn);
-    } catch (error) {
-        this.logger.error('Query failed:', error);
-        throw new Error('Data query exception');
-    }
-}
-```
-
-## Extension Example
-
-### More Complex Query Class Implementation
-
-```typescript
-export default class AdvancedProductSearchCriteria extends CommonSearchCriteria {
-    constructor(tenantCode: string, criteria: any) {
-        super(criteria);
-        this.initializeBaseQuery(tenantCode);
-    }
-    
-    private initializeBaseQuery(tenantCode: string) {
-        this.sql = `
-            SELECT p.*, pc.name as category_name, 
-                   COUNT(pi.id) as inventory_count
-            FROM wms_products p
-            LEFT JOIN wms_product_categories pc ON pc.code = p.category_code
-            LEFT JOIN wms_product_inventory pi ON pi.product_code = p.code
-            WHERE p.tenant_code = $1 AND p.deleted = false`;
-        this.params = [tenantCode];
-        this.orderBy = `GROUP BY p.id, pc.name ORDER BY p.created_at DESC`;
-    }
-
-    protected buildDynamicQuery() {
-        // Basic field queries
-        this.buildStarCriteria(this.criteria.name, 'p.name');
-        this.buildCriteria(this.criteria.status, 'p.status');
-        
-        // Date range query
-        this.buildRangeCriteria(
-            this.criteria.createdFrom, 
-            this.criteria.createdTo, 
-            'p.created_at'
-        );
-        
-        // Price range query
-        this.buildRangeCriteria(
-            this.criteria.priceMin, 
-            this.criteria.priceMax, 
-            'p.price'
-        );
-        
-        // Inventory conditions
-        if (this.criteria.hasInventory !== undefined) {
-            if (this.criteria.hasInventory) {
-                this.sql += ` AND EXISTS (SELECT 1 FROM wms_product_inventory pi2 WHERE pi2.product_code = p.code)`;
-            } else {
-                this.sql += ` AND NOT EXISTS (SELECT 1 FROM wms_product_inventory pi2 WHERE pi2.product_code = p.code)`;
-            }
-        }
     }
 }
 ```
