@@ -1,8 +1,6 @@
 import {getLogger, Logger} from "./Logger.js";
 import beanFactory from "./BeanFactory.js";
 
-
-
 export default abstract class CommonRepository {
 
     protected readonly logger: Logger;
@@ -13,11 +11,10 @@ export default abstract class CommonRepository {
     }
 
     /**
-     * 获取对应的DAO实例
+     * Obtains a lazy proxy for the specified DAO instance.
+     * @param name - Registered DAO bean name.
      */
     protected getDAOInstance<T extends object>(name: string): T {
         return beanFactory.createBean<T>(name);
     }
-
-
 }

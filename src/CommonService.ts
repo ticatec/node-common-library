@@ -1,23 +1,22 @@
-// CommonService.ts
 import DBConnection from "./db/DBConnection.js";
 import beanFactory from "./BeanFactory.js";
 import { getLogger, Logger } from "./Logger.js";
 import TransactionManager from './TransactionManager.js';
 import {Propagation} from "./db/Transaction.js";
 
-type dbProcessor = (conn: DBConnection) => Promise<any>
+type dbProcessor = (conn: DBConnection) => Promise<any>;
 
 export default abstract class CommonService {
     protected readonly logger: Logger;
 
     protected constructor() {
         this.logger = getLogger(this.constructor.name);
-        this.logger.debug(`创建Service实例:${this.constructor.name}`);
+        this.logger.debug(`Created Service instance: ${this.constructor.name}`);
         this._applyTransactionAspect();
     }
 
     /**
-     * 获取数据库连接 - 优先从当前事务获取
+     * Retrieves the database connection for the current transaction context.
      */
     protected async getDBConnection(): Promise<DBConnection> {
         const conn = TransactionManager.getCurrentConnection();
@@ -28,7 +27,8 @@ export default abstract class CommonService {
     }
 
     /**
-     * 获取对应的Repository实例
+     * Obtains a lazy proxy for the specified Repository instance.
+     * @param name - Registered Repository bean name.
      */
     protected getRepositoryInstance<T extends object>(name: string): T {
         return beanFactory.createBean<T>(name);

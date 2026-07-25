@@ -1,28 +1,28 @@
 import {v7 as uuidv7} from 'uuid';
 
 /**
- * 判断字符串是否为空（null、undefined或空白字符串）
- * @param s - 要检查的值
- * @returns 如果为空则返回true
+ * Checks if a string is empty (null, undefined, or whitespace only).
+ * @param s - Value to check.
+ * @returns True if empty.
  */
 const isEmpty = (s: unknown): boolean => {
     return s == null || (typeof s == 'string' && s.trim().length === 0);
-}
+};
 
 /**
- * 生成32位UUID，去除所有的分隔符'-'
- * @returns 生成的32位无分隔符的UUID字符串
+ * Generates a 32-character UUID with hyphens removed.
+ * @returns 32-character unhyphenated UUID string.
  */
 const genID = (): string => {
     return uuidv7().replace(/-/g, '');
-}
+};
 
 /**
- * 给一个字符串左侧填充字符到指定长度，比如输入的（'45'， '0'， 4），返回0045
- * @param s 待处理的字符串
- * @param prefix 要添加的字符
- * @param len 期望长度
- * @returns 填充后的字符串
+ * Pads a string on the left with a prefix character up to the specified target length.
+ * @param s - Target string.
+ * @param prefix - Padding prefix character.
+ * @param len - Desired length.
+ * @returns Left-padded string.
  */
 const leftPad = (s: string, prefix: string, len: number): string => {
     if (len <= 0 || s.length >= len) {
@@ -30,39 +30,39 @@ const leftPad = (s: string, prefix: string, len: number): string => {
     }
     const diffLen = len - s.length;
     return prefix.repeat(diffLen) + s;
-}
+};
 
 /**
- * 生成标准格式的UUID（包含分隔符'-'）
- * @returns 标准格式的UUID字符串
+ * Generates a standard UUID string (including hyphens).
+ * @returns Standard UUID string.
  */
 const uuid = (): string => {
     return uuidv7();
-}
+};
 
 /**
- * 判断值是否为字符串类型
- * @param s - 要检查的值
- * @returns 如果是字符串类型则返回true
+ * Checks if a value is a string.
+ * @param s - Value to check.
+ * @returns True if value is a string.
  */
 const isString = (s: unknown): boolean => {
     return typeof s === 'string';
-}
+};
 
 /**
- * 判断字符串是否为数字格式
- * @param s - 要检查的值
- * @returns 如果是数字格式则返回true
+ * Checks if a string formatted value represents a valid number.
+ * @param s - Value to check.
+ * @returns True if formatted as a number.
  */
 const isNumber = (s: unknown): boolean => {
     return isString(s) && !isNaN(Number(s));
-}
+};
 
 /**
- * 解析字符串为整数，如果解析失败则返回默认值
- * @param s - 要解析的字符串或数字
- * @param defValue - 解析失败时的默认值，默认为0
- * @returns 解析后的整数值
+ * Parses a string into an integer number, returning a default fallback value if parsing fails.
+ * @param s - Value to parse.
+ * @param defValue - Default fallback value if parsing fails (defaults to 0).
+ * @returns Parsed integer value.
  */
 const parseNumber = (s: unknown, defValue: number = 0): number => {
     if (typeof s === 'number') {
@@ -72,7 +72,7 @@ const parseNumber = (s: unknown, defValue: number = 0): number => {
         return parseInt(s as string, 10);
     }
     return defValue;
-}
+};
 
 interface StringUtilsUtils {
     isEmpty(s: unknown): boolean;

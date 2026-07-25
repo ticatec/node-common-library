@@ -1,5 +1,5 @@
 /**
- * 字段的类型
+ * Database field data types.
  */
 export enum FieldType {
     Text = 'Text',
@@ -8,19 +8,19 @@ export enum FieldType {
 }
 
 /**
- * 数据库字段接口定义
+ * Database field definition interface.
  */
 export default interface Field {
     /**
-     * 字段名称
+     * Field name.
      */
     name: string;
     /**
-     * 字段数据类型
+     * Field data type.
      */
     type: FieldType;
     /**
-     * 字段最大长度（可选）
+     * Optional maximum field length.
      */
     length?: number;
 }

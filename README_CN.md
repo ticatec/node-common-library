@@ -21,9 +21,9 @@
 ## 📦 安装
 
 ```bash
-npm install @ticatec/node-common-library
-# 运行时需要的对等依赖：
-npm install pino reflect-metadata
+pnpm add @ticatec/node-common-library @ticatec/logger-wrapper pino reflect-metadata
+# 或 npm
+npm install @ticatec/node-common-library @ticatec/logger-wrapper pino reflect-metadata
 ```
 
 本包以 ESM / CJS 双模式发布，使用方无需任何额外配置 —— CommonJS 项目用 `require()`，ESM / TypeScript 项目用 `import`。
@@ -38,16 +38,16 @@ const { DBManager, beanFactory, CommonService, CommonDAO } = require('@ticatec/n
 
 ## 🚀 快速开始
 
-### 1. 注入应用层 Logger（可选）
+### 1. 初始化 Logger（`@ticatec/logger-wrapper`）
 
-应用层在启动时初始化自己的 Pino 日志实例，并通过 `setLogger()` 注入给公共库：
+应用层在启动入口初始化 Pino 日志实例，并通过 `@ticatec/logger-wrapper` 的 `initialize()` 完成全局单次初始化：
 
 ```typescript
 import pino from 'pino';
-import { setLogger } from '@ticatec/node-common-library';
+import { initialize } from '@ticatec/logger-wrapper';
 
 const appLogger = pino({ level: process.env.LOG_LEVEL || 'info' });
-setLogger(appLogger);
+initialize(appLogger);
 ```
 
 ### 2. 初始化数据库管理器

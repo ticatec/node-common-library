@@ -1,23 +1,21 @@
-
 /**
- * 分页查询结果接口
+ * Paginated query result interface.
  */
-export default interface PaginationList<> {
+export default interface PaginationList {
     /**
-     * 总记录数
+     * Total matching record count.
      */
     count: number;
     /**
-     * 是否还有更多数据
+     * Whether more data is available beyond current page.
      */
     hasMore: boolean;
     /**
-     * 当前页的数据列表
+     * Array of items on the current page.
      */
     list: Array<any>;
     /**
-     * 总页数
+     * Total calculated number of pages.
      */
     pages: number;
-
 }

@@ -3,26 +3,26 @@ import DBConnection from "../db/DBConnection.js";
 export default interface BaseDAO<T, K> {
 
     /**
-     * 创建新实体
-     * @param conn - 数据库连接对象
-     * @param item - 要创建的实体对象
-     * @returns Promise返回影响的记录数
+     * Creates a new entity.
+     * @param conn - Database connection object.
+     * @param item - Entity object to create.
+     * @returns Promise resolving to the number of affected records.
      */
     createNew(conn: DBConnection, item: T): Promise<number>;
 
     /**
-     * 更新实体
-     * @param conn - 数据库连接对象
-     * @param item - 要更新的实体对象
-     * @returns Promise返回影响的记录数
+     * Updates an existing entity.
+     * @param conn - Database connection object.
+     * @param item - Entity object to update.
+     * @returns Promise resolving to the number of affected records.
      */
     update(conn: DBConnection, item: T): Promise<number>;
 
     /**
-     * 根据主键查找实体
-     * @param conn - 数据库连接对象
-     * @param key - 主键值
-     * @returns Promise返回对应的实体对象
+     * Finds an entity by its primary key.
+     * @param conn - Database connection object.
+     * @param key - Primary key value.
+     * @returns Promise resolving to the target entity object.
      */
     find(conn: DBConnection, key: K): Promise<T>;
 

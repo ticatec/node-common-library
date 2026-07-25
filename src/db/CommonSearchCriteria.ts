@@ -5,7 +5,7 @@ import {getLogger, Logger} from "../Logger.js";
 
 const DEFAULT_ROWS_PAGE = 25;
 const FIRST_PAGE = 1;
-const ONE_DAY = 24 * 60 *60 * 1000;
+const ONE_DAY = 24 * 60 * 60 * 1000;
 
 export default abstract class CommonSearchCriteria {
 
@@ -26,15 +26,15 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 设置需要转换为布尔值的字段
-     * @param fields - 需要转换的字段路径数组（支持嵌套，如 'user.isActive'）
+     * Sets fields to be coerced into boolean values.
+     * @param fields - Array of field property paths (supports nested paths like 'user.isActive').
      */
     setBooleanFields(...fields: Array<string>): void {
         this.booleanFields = fields;
     }
 
     /**
-     * 构建动态查询条件，子类应重写此方法
+     * Builds dynamic SQL query criteria. Subclasses should override this method.
      * @protected
      * @abstract
      */
@@ -43,12 +43,12 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 查询符合条件的记录数量
-     * @param conn - 数据库连接对象
-     * @param sql - SQL查询语句
-     * @param params - SQL参数数组
+     * Queries the count of matching records.
+     * @param conn - Database connection object.
+     * @param sql - SQL query string.
+     * @param params - Array of SQL query parameters.
      * @private
-     * @returns Promise返回记录总数
+     * @returns Promise resolving to the total count.
      */
     private async queryCount(conn: DBConnection, sql: string, params: Array<any>): Promise<number> {
         let countSQL = `select count(*) as cc from (${sql}) a`;
@@ -57,59 +57,59 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 在将行记录转换成对象后的后处理回调函数
+     * Post-construction callback invoked after mapping rows to target objects.
      * @protected
-     * @returns 后处理函数或null
+     * @returns Post-processor function or null.
      */
     protected getPostConstructor(): any {
         return null;
     }
 
     /**
-     * 判断值是否不为空
-     * @param s - 要检查的值
+     * Checks if a value is not empty.
+     * @param s - Value to check.
      * @protected
-     * @returns 如果不为空则返回true
+     * @returns True if not empty.
      */
     protected isNotEmpty(s: any): boolean {
         return StringUtils.isString(s) ? !StringUtils.isEmpty(s) : s != null;
     }
 
     /**
-     * 转义字符串中的%字符
-     * @param s - 要转义的字符串
+     * Escapes percentage (%) characters in a string.
+     * @param s - String to escape.
      * @protected
-     * @returns 转义后的字符串
+     * @returns Escaped string.
      */
     protected escapePercentage(s: string): string {
         return s.replace(/%/g, '\\%');
     }
 
     /**
-     * 判断字符串是否包含通配符*
-     * @param s - 要检查的字符串
+     * Checks if a string contains wildcard asterisk (*).
+     * @param s - String to check.
      * @protected
-     * @returns 如果包含*则返回true
+     * @returns True if string contains *.
      */
     protected includeStar(s: string): boolean {
         return s.includes('*');
     }
 
     /**
-     * 将字符串中的*通配符替换成SQL的%通配符
-     * @param s - 要转换的字符串
+     * Replaces asterisk (*) wildcards with SQL percentage (%) wildcards.
+     * @param s - Input string.
      * @protected
-     * @returns 转换后的字符串
+     * @returns Converted SQL wildcard string.
      */
     protected toWildSQL(s: string): string {
         return s.replace(/\*/g, '%');
     }
 
     /**
-     * 替换所有的*为%通配符，先转义原有的%字符
-     * @param s - 要处理的字符串
+     * Escapes existing percentage (%) characters and replaces wildcard asterisks (*) with %.
+     * @param s - Input string to process.
      * @protected
-     * @returns 处理后的字符串
+     * @returns Processed string.
      */
     protected replaceWildStar(s: string): string {
         return s.replace(/%/g, '\\%').replace(/\*/g, '%');
@@ -120,12 +120,12 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 构建范围查询条件（from/to范围）
-     * @param fromValue - 起始值
-     * @param toValue - 结束值
-     * @param field - 字段名
+     * Builds range query criteria (from / to boundaries).
+     * @param fromValue - Start boundary value.
+     * @param toValue - End boundary value.
+     * @param field - Field name.
      * @protected
-     * @returns 下一个参数的索引
+     * @returns Next parameter positional index.
      */
     protected buildRangeCriteria(fromValue: any, toValue: any, field: string): number {
         let idx = this.params.length + 1;
@@ -141,11 +141,11 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 构建带通配符的查询条件（有*用LIKE，无*用等于）
-     * @param text - 搜索文本
-     * @param field - 字段名
+     * Builds wildcard query criteria (uses LIKE if * is present, otherwise equals =).
+     * @param text - Search text.
+     * @param field - Field name.
      * @protected
-     * @returns 下一个参数的索引
+     * @returns Next parameter positional index.
      */
     protected buildStarCriteria(text: string, field: string): number {
         let idx = this.params.length + 1;
@@ -162,11 +162,11 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 构建等于条件查询
-     * @param value - 查询值
-     * @param field - 字段名
+     * Builds equality criteria (field = value).
+     * @param value - Search value.
+     * @param field - Field name.
      * @protected
-     * @returns 下一个参数的索引
+     * @returns Next parameter positional index.
      */
     protected buildCriteria(value: any, field: string): number {
         let idx = this.params.length + 1;
@@ -178,18 +178,18 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * 封装LIKE查询值，在字符串两端添加%通配符
-     * @param s - 要封装的字符串
+     * Wraps a search string with % wildcards for LIKE matching (%string%).
+     * @param s - Input string.
      * @protected
-     * @returns 封装后的字符串 (%字符串%)
+     * @returns Wrapped string (%string%).
      */
     protected wrapLikeMatch(s: string): string {
         return `%${s}%`;
     }
 
     /**
-     * 执行分页查询，返回分页结果
-     * @param conn - 数据库连接对象
+     * Executes a paginated query and returns a PaginationList result.
+     * @param conn - Database connection object.
      */
     async paginationQuery(conn: DBConnection): Promise<PaginationList> {
         this.buildDynamicQuery();
@@ -203,18 +203,18 @@ export default abstract class CommonSearchCriteria {
             let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostConstructor(), this.booleanFields) : [];
             const hasMore = offset + rows < count;
             const pages = (Math.floor((count - 1) / rows)) + 1;
-            return {count, hasMore, list, pages}
+            return {count, hasMore, list, pages};
         } else {
-            return {count, hasMore: false, list: [], pages: 0}
+            return {count, hasMore: false, list: [], pages: 0};
         }
     }
 
     /**
-     * 不分页查询，返回所有符合条件的记录
-     * @param conn - 数据库连接对象
-     * @returns Promise返回数据对象数组
+     * Executes an unpaginated query, returning all matching records.
+     * @param conn - Database connection object.
+     * @returns Promise resolving to an array of result objects.
      */
     async query(conn: DBConnection): Promise<Array<any>> {
-        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params, null, this.booleanFields)
+        return await conn.listQuery(`${this.sql} ${this.orderBy}`, this.params, null, this.booleanFields);
     }
 }

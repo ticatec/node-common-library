@@ -1,17 +1,20 @@
-// db/Transaction.ts
 import 'reflect-metadata';
 
 export enum Propagation {
-    REQUIRED,   // 默认：若当前有事务则加入，否则新建
-    REQUIRES_NEW, // 始终新建独立事务
-    NONE,       // 不开启事务（以非事务方式执行）
+    REQUIRED,     // Default: join current transaction if present, otherwise create new
+    REQUIRES_NEW, // Always create new independent transaction
+    NONE,         // Do not start transaction (execute without transaction)
 }
 
+/**
+ * Decorator to mark a service method for declarative transaction handling.
+ * @param propagation Transaction propagation behavior.
+ */
 export function Transaction(propagation: Propagation = Propagation.REQUIRED) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // 在元数据中保存传播级别
+        // Save propagation level in reflect metadata
         Reflect.defineMetadata('transaction:propagation', propagation, target, propertyKey);
-        // 标记为事务方法
+        // Mark method as transaction-enabled
         Reflect.defineMetadata('transaction:enabled', true, target, propertyKey);
     };
 }

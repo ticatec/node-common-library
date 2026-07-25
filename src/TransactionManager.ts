@@ -1,4 +1,3 @@
-// TransactionManager.ts
 import DBConnection from './db/DBConnection.js';
 import DBManager from './db/DBManager.js';
 import ThreadLocal from './ThreadLocal.js';
@@ -6,24 +5,20 @@ import {Propagation} from "./db/Transaction.js";
 
 interface TransactionContext {
     connection: DBConnection;
-    // 可扩展：传播级别、保存点等
+    isTransaction: boolean;
 }
 
-// TransactionManager.ts
 export default class TransactionManager {
-    private static threadLocal = new ThreadLocal<{
-        connection: DBConnection;
-        isTransaction: boolean;   // 标记是否为事务连接
-    }>();
+    private static threadLocal = new ThreadLocal<TransactionContext>();
 
     static getCurrentConnection(): DBConnection | undefined {
         return this.threadLocal.get()?.connection;
     }
 
     /**
-     * 执行数据库操作，自动管理连接生命周期
-     * @param propagation 传播行为
-     * @param fn 业务函数
+     * Executes database operations while managing connection lifecycle and transaction state automatically.
+     * @param propagation Transaction propagation behavior.
+     * @param fn Business processor function receiving the database connection.
      */
     static async execute(
         propagation: Propagation,
@@ -31,13 +26,13 @@ export default class TransactionManager {
     ): Promise<any> {
         const currentCtx = this.threadLocal.get();
 
-        // 若为 NONE 或 REQUIRED 且无上下文，则新建连接（但不开启事务）
+        // If propagation is NONE or REQUIRED without existing context, open a new connection
         if (propagation === Propagation.NONE ||
             (propagation === Propagation.REQUIRED && !currentCtx)) {
             const conn = await DBManager.getInstance().connect();
-            const ctx = { connection: conn, isTransaction: false };
+            const ctx: TransactionContext = { connection: conn, isTransaction: false };
 
-            // 在上下文中运行，确保 DAO 能获取到连接
+            // Run within AsyncLocalStorage thread context so DAOs can access the connection
             return new Promise((resolve, reject) => {
                 this.threadLocal.run(ctx, async () => {
                     try {
@@ -62,12 +57,11 @@ export default class TransactionManager {
             });
         }
 
-        // 已有事务，直接复用
+        // Reuse active transaction connection if REQUIRED propagation and context exists
         if (propagation === Propagation.REQUIRED && currentCtx) {
             return await fn(currentCtx.connection);
         }
 
-        // REQUIRES_NEW 等其他传播行为可类似扩展
         throw new Error('Unsupported propagation: ' + propagation);
     }
 }

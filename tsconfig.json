@@ -5,12 +5,19 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": false,
     "skipLibCheck": true,
     "sourceRoot": "src",
-    "types": ["node", "reflect-metadata"]
+    "types": ["node", "reflect-metadata", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@ticatec/logger-wrapper": ["../logger_warpper/src/index.ts"]
+    }
   },
   "include": [
     "src/**/*"

@@ -1,20 +1,19 @@
-
 import StringUtils from "./StringUtils.js";
 import DBConnection from "./db/DBConnection.js";
 import {getLogger, Logger} from "./Logger.js";
 import TransactionManager from "./TransactionManager.js";
 
 /**
- * 快速搜索结果接口
- * @template T 列表项的类型
+ * Quick search result interface.
+ * @template T Type of items in the list.
  */
 export interface QuickSearchResult<T = any> {
     /**
-     * 结果列表
+     * Result list.
      */
     list: Array<T>;
     /**
-     * 是否有更多数据
+     * Whether more data is available beyond the current page.
      */
     hasMore: boolean;
 }
@@ -25,13 +24,13 @@ export default abstract class CommonDAO {
 
     protected constructor() {
         this.logger = getLogger(this.constructor.name);
-        this.logger.debug(`创建DAO实例:${this.constructor.name}`);
+        this.logger.debug(`Created DAO instance: ${this.constructor.name}`);
     }
 
     /**
-     * 获取当前线程的数据库连接（自动感知事务）
-     * - 若当前存在事务，返回事务连接
-     * - 否则返回新连接（调用者需负责关闭）
+     * Retrieves the database connection for the current execution thread (transaction-aware).
+     * - Returns active transaction connection if inside a transaction.
+     * - Otherwise throws an error if no connection is active in the context.
      */
     protected async getDBConnection(): Promise<DBConnection> {
         const conn = TransactionManager.getCurrentConnection();
@@ -42,21 +41,21 @@ export default abstract class CommonDAO {
     }
 
     /**
-     * 生成32位的uuid
+     * Generates a 32-character UUID string.
      * @protected
-     * @returns 生成的32位UUID字符串
+     * @returns Generated 32-character UUID string.
      */
     protected genID(): string {
         return StringUtils.genID();
     }
 
     /**
-     * 执行count语句，返回count值
-     * @param sql - 要执行的count SQL语句
-     * @param params - SQL参数数组
-     * @param key - 计数字段的键名，默认为'cc'
+     * Executes a count query and returns the count value.
+     * @param sql - Count SQL query to execute.
+     * @param params - Array of SQL query parameters.
+     * @param key - Key name of the count column, defaults to 'cc'.
      * @protected
-     * @returns Promise返回计数值
+     * @returns Promise resolving to the count number.
      */
     protected async executeCountSQL(sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
         const conn: DBConnection = await this.getDBConnection();
@@ -66,49 +65,47 @@ export default abstract class CommonDAO {
     }
 
     /**
-     * 转换布尔为整数
-     * @param value - 要转换的布尔值
+     * Converts a boolean value to an integer (true=1, false=0).
+     * @param value - Boolean value to convert.
      * @protected
-     * @returns 布尔值对应的整数 (true=1, false=0)
+     * @returns Integer value (1 or 0).
      */
     protected getBooleanValue(value: boolean): number {
         return value === true ? 1 : 0;
     }
 
     /**
-     * 转换布尔为字符串
-     * @param value - 要转换的布尔值
+     * Converts a boolean value to a character ('T' or 'F').
+     * @param value - Boolean value to convert.
      * @protected
-     * @returns 布尔值对应的字符串 (true='T', false='F')
+     * @returns String ('T' or 'F').
      */
     protected getBoolean(value: boolean): string {
         return value === true ? 'T' : 'F';
     }
 
     /**
-     * 将T/F类型的字符串字段转换为boolean类型
-     * @param data - 要转换的数据对象
-     * @param fields - 需要转换的字段名数组
+     * Converts T/F string or 1/0 numeric fields in an object into boolean values.
+     * @param data - Target object to transform.
+     * @param fields - Array of field names to convert.
      * @protected
      */
     protected convertBooleanFields(data: any, fields: Array<string>): void {
         fields.forEach(field => {
             data[field] = data[field] === 'T' || data[field] === 1;
-        })
+        });
     }
 
-
     /**
-     * 快速查询，返回分页记录
-     * @template T - 列表项的类型
-     * @param conn - 数据库连接对象
-     * @param sql - 查询SQL语句
-     * @param params - SQL参数数组，默认为空数组
-     * @param pageNo - 页码，默认为1
-     * @param rowCount - 每页行数，默认为25
-     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
+     * Quick paginated search query returning list items and a hasMore flag.
+     * @template T - Type of items in the result list.
+     * @param sql - Base SQL query statement.
+     * @param params - Array of SQL query parameters (defaults to empty array).
+     * @param pageNo - Page number (defaults to 1).
+     * @param rowCount - Number of rows per page (defaults to 25).
+     * @param booleanFields - Field names to coerce to boolean (supports nested properties like 'user.isActive').
      * @protected
-     * @returns Promise返回包含列表数据和是否有更多数据的对象
+     * @returns Promise resolving to QuickSearchResult containing list data and hasMore flag.
      */
     protected async quickSearch<T = any>(
         sql: string,

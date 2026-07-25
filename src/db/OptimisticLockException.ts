@@ -1,16 +1,16 @@
 /**
- * 乐观锁异常类，用于处理并发更新冲突
+ * Optimistic lock exception thrown when a concurrent update conflict occurs.
  */
 export default class OptimisticLockException extends Error {
 
     #entity: any;
 
     /**
-     * 构造函数
-     * @param message - 错误信息
-     * @param entity - 发生冲突的实体对象
+     * Constructs an OptimisticLockException.
+     * @param message - Error message.
+     * @param entity - Conflicting target entity object.
      */
-    constructor(message, entity) {
+    constructor(message: string, entity: any) {
         super(message);
         //@ts-ignore
         Error.captureStackTrace(this, this.constructor);
@@ -19,10 +19,10 @@ export default class OptimisticLockException extends Error {
     }
 
     /**
-     * 获取发生冲突的实体对象
-     * @returns 实体对象
+     * Retrieves the conflicting target entity object.
+     * @returns Conflicting entity object.
      */
-    get entity():any {
+    get entity(): any {
         return this.#entity;
     }
 }

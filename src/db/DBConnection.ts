@@ -8,7 +8,6 @@ type PostConstructionFun = (obj: any) => void;
 
 export {PostConstructionFun};
 
-
 export default abstract class DBConnection {
 
     protected readonly logger: Logger;
@@ -18,81 +17,80 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 开始事务
+     * Begins a database transaction.
      * @abstract
      */
     abstract beginTransaction(): Promise<void>;
 
     /**
-     * 提交事务
+     * Commits the current database transaction.
      * @abstract
      */
     abstract commit(): Promise<void>;
 
     /**
-     * 回滚事务
+     * Rolls back the current database transaction.
      * @abstract
      */
     abstract rollback(): Promise<void>;
 
     /**
-     * 关闭数据库连接
+     * Closes the underlying database connection.
      * @abstract
      */
     abstract close(): Promise<void>;
 
     /**
-     * 执行一个SQL语句
-     * @param sql - SQL语句
+     * Executes a raw SQL statement.
+     * @param sql - SQL query string.
      * @protected
      * @abstract
-     * @returns Promise返回执行结果
+     * @returns Promise resolving to execution result.
      */
     protected abstract executeSQL(sql: string): Promise<any>;
 
     /**
-     * 执行update/delete/insert查询，返回影响记录的数量
-     * @param sql - SQL语句
-     * @param params - SQL参数数组
+     * Executes an UPDATE / DELETE / INSERT query and returns the number of affected rows.
+     * @param sql - SQL query string.
+     * @param params - Parameter array.
      * @abstract
-     * @returns Promise返回影响的记录数量
+     * @returns Promise resolving to the number of affected rows.
      */
     abstract executeUpdate(sql: string, params: Array<any>): Promise<number>;
 
     /**
-     * 插入一条记录
-     * @param sql - INSERT SQL语句
-     * @param params - SQL参数数组
+     * Inserts a single record.
+     * @param sql - INSERT SQL query string.
+     * @param params - Parameter array.
      * @abstract
-     * @returns Promise返回插入结果
+     * @returns Promise resolving to insertion result.
      */
     abstract insertRecord(sql: string, params: Array<any>): Promise<any>;
 
     /**
-     * 更新符合条件的记录
-     * @param sql - UPDATE SQL语句
-     * @param params - SQL参数数组
+     * Updates matching records.
+     * @param sql - UPDATE SQL query string.
+     * @param params - Parameter array.
      * @abstract
-     * @returns Promise返回更新结果
+     * @returns Promise resolving to update result.
      */
     abstract updateRecord(sql: string, params: Array<any>): Promise<any>;
 
     /**
-     * 删除符合条件的记录
-     * @param sql - DELETE SQL语句
-     * @param params - SQL参数数组
+     * Deletes matching records.
+     * @param sql - DELETE SQL query string.
+     * @param params - Parameter array.
      * @abstract
-     * @returns Promise返回影响的记录数量
+     * @returns Promise resolving to the number of affected rows.
      */
     abstract deleteRecord(sql: string, params: Array<any>): Promise<number>;
 
-
     /**
-     * 获取count数，默认属性是cc
-     * @param data - 包含计数信息的数据对象
-     * @param key - 计数字段的键名，默认为'cc'
+     * Extracts the count value from a query result object (defaults to key 'cc').
+     * @param data - Result object containing count information.
+     * @param key - Column key for the count (defaults to 'cc').
      * @protected
-     * @returns 解析后的计数值
+     * @returns Parsed integer count.
      */
     protected getCount(data: any, key: string = 'cc'): number {
         const s = data == null ? null : data[key];
@@ -100,11 +98,11 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 判断值是否为布尔真值
-     * 支持 1/0 和 T/F 格式，特殊数据库可重写此方法支持其他格式
-     * @param value - 要判断的值
+     * Evaluates whether a value represents a boolean true.
+     * Supports 1/0, '1'/'0', 'T'/'F', 't'/'f', true/false.
+     * @param value - Target value.
      * @protected
-     * @returns 是否为真
+     * @returns True if value represents boolean truth.
      */
     protected getBoolean(value: any): boolean {
         if (value === 1 || value === '1' || value === 'T' || value === 't' || value === true) {
@@ -113,14 +111,14 @@ export default abstract class DBConnection {
         if (value === 0 || value === '0' || value === 'F' || value === 'f' || value === false) {
             return false;
         }
-        return !!value; // 其他情况使用强制转换
+        return !!value;
     }
 
     /**
-     * 转换指定字段为布尔值
-     * 支持嵌套字段路径，如 'user.isActive'
-     * @param data - 数据对象
-     * @param fields - 需要转换的字段路径数组
+     * Converts specified fields on an object to boolean values.
+     * Supports nested field paths (e.g. 'user.isActive').
+     * @param data - Data object.
+     * @param fields - Array of field property paths.
      * @protected
      */
     protected convertBooleanFields(data: any, fields: Array<string>): void {
@@ -132,16 +130,14 @@ export default abstract class DBConnection {
             const parts = fieldPath.split('.');
             let current = data;
 
-            // 遍历到倒数第二层
             for (let i = 0; i < parts.length - 1; i++) {
                 const part = parts[i];
                 if (current[part] == null) {
-                    return; // 路径不存在，跳过
+                    return;
                 }
                 current = current[part];
             }
 
-            // 最后一层
             const lastKey = parts[parts.length - 1];
             if (current && current[lastKey] != null) {
                 current[lastKey] = this.getBoolean(current[lastKey]);
@@ -150,24 +146,21 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 执行count语句，返回count值
-     * @param sql - 要执行的count SQL语句
-     * @param params - SQL参数数组
-     * @param key - 计数字段的键名，默认为'cc'
-     * @protected
-     * @returns Promise返回计数值
+     * Executes a count query and returns the count value.
+     * @param sql - Count SQL query.
+     * @param params - Query parameters.
+     * @param key - Column key for count (defaults to 'cc').
      */
     async executeCountSQL(sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
         return this.getCount(await this.find(sql, params), key);
     }
 
     /**
-     *
-     * @param sql
-     * @param params
-     * @param pageNo
-     * @param rowCount
-     * @protected
+     * Executes a quick paginated query.
+     * @param sql - SQL query string.
+     * @param params - Parameter array.
+     * @param pageNo - Page number (defaults to 1).
+     * @param rowCount - Number of rows per page (defaults to 25).
      */
     async quickSearch(sql: string, params: Array<any> = [], pageNo: number = 1, rowCount: number = 25): Promise<any> {
         pageNo = pageNo < 1 ? 1 : pageNo;
@@ -178,21 +171,21 @@ export default abstract class DBConnection {
             return {
                 list,
                 hasMore: list.length < count
-            }
+            };
         } else {
             return {
                 list: [],
                 hasMore: false
-            }
+            };
         }
     }
 
     /**
-     * 执行select查询语句，返回数据列表
-     * @param sql - SQL查询语句
-     * @param params - SQL参数数组
-     * @param postConstruction - 后处理回调函数
-     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
+     * Executes a SELECT query returning a list of mapped objects.
+     * @param sql - SQL query string.
+     * @param params - Parameter array.
+     * @param postConstruction - Optional post-construction callback per object.
+     * @param booleanFields - Field names to coerce to boolean values.
      */
     async listQuery(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<Array<any>> {
         let result = await this.fetchData(sql, params);
@@ -209,11 +202,11 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 查询单条记录，如果有多条，返回第一条
-     * @param sql - SQL查询语句
-     * @param params - SQL参数数组
-     * @param postConstruction - 后处理回调函数
-     * @param booleanFields - 需要转换为布尔值的字段名数组（支持嵌套，如 'user.isActive'）
+     * Queries a single record. Returns the first record if multiple match.
+     * @param sql - SQL query string.
+     * @param params - Parameter array.
+     * @param postConstruction - Optional post-construction callback for the mapped object.
+     * @param booleanFields - Field names to coerce to boolean values.
      */
     async find(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<any> {
         let result = await this.fetchData(sql, params);
@@ -223,37 +216,38 @@ export default abstract class DBConnection {
                 this.convertBooleanFields(row, booleanFields);
             }
             if (postConstruction) {
-                postConstruction(row)
+                postConstruction(row);
             }
         }
         return row;
     }
 
     /**
-     * 处理SQL文件，去除注释行，分割sql语句
-     * @param file
+     * Reads a SQL file, strips comments, and splits into individual SQL statements.
+     * @param file - File path.
      * @private
      */
     private loadAndSplitSQL(file: string) {
         let sql = fs.readFileSync(file, 'utf8');
 
-        // 去除多行注释 /* ... */
+        // Strip multi-line comments /* ... */
         sql = sql.replace(/\/\*[\s\S]*?\*\//g, '');
 
-        // 去除单行注释 -- ... 和 // ...
+        // Strip single-line comments -- ... and // ...
         sql = sql.replace(/--.*$/gm, '');
         sql = sql.replace(/\/\/.*$/gm, '');
 
-        // 按 ; 分割（适用于简单语句，不解析字符串中的 ;）
-        return  sql
-            .split(/;\s*[\r\n]+|;\s*$/) // 按换行或文件结尾的分号切分
+        // Split by semicolons at line end or EOF
+        return sql
+            .split(/;\s*[\r\n]+|;\s*$/)
             .map(stmt => stmt.trim())
             .filter(stmt => stmt.length > 0);
     }
+
     /**
-     * 执行一个SQL文件，去除注释并分割SQL语句执行
-     * @param file - SQL文件路径
-     * @returns Promise返回是否有错误发生
+     * Executes a SQL file containing multiple statements.
+     * @param file - SQL file path.
+     * @returns Promise resolving to true if any error occurred.
      */
     async executeSQLFile(file: string): Promise<boolean> {
         let hasError = false;
@@ -271,65 +265,64 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 执行分页查询，按照分页条件返回分页结果
-     * @param criteria - 分页查询条件对象
-     * @returns Promise返回分页结果列表
+     * Executes a paginated search query using the provided criteria.
+     * @param criteria - CommonSearchCriteria object.
+     * @returns Promise resolving to PaginationList.
      */
     async executePaginationSQL(criteria: CommonSearchCriteria): Promise<PaginationList> {
         return criteria.paginationQuery(this);
     }
 
     /**
-     * 根据条件查询返回所有符合条件的结果，忽略分页
-     * @param criteria - 查询条件对象
-     * @returns Promise返回所有符合条件的数据数组
+     * Queries all records matching criteria, ignoring pagination.
+     * @param criteria - CommonSearchCriteria object.
+     * @returns Promise resolving to array of objects.
      */
     async queryByCriteria(criteria: CommonSearchCriteria): Promise<Array<any>> {
         return criteria.query(this);
     }
 
-
     /**
-     * 执行SQL语句，获取数据
-     * @param sql - SQL语句
-     * @param params - SQL参数数组，可选
+     * Executes a raw query statement to fetch database data.
+     * @param sql - SQL query string.
+     * @param params - Optional parameter array.
      * @protected
      * @abstract
-     * @returns Promise返回查询结果
+     * @returns Promise resolving to raw database result.
      */
     protected abstract fetchData(sql: string, params?: Array<any>): Promise<any>;
 
     /**
-     * 获取查询结果对应的字段名列表
-     * @param result - 查询结果对象
+     * Retrieves field definitions from a query result.
+     * @param result - Raw query result.
      * @abstract
-     * @returns 字段信息数组
+     * @returns Array of Field metadata objects.
      */
-    abstract getFields(result:any): Array<Field>;
+    abstract getFields(result: any): Array<Field>;
 
     /**
-     * 从结果中获得数据集
-     * @param result - 查询结果对象
+     * Retrieves row dataset array from a raw query result.
+     * @param result - Raw query result.
      * @protected
      * @abstract
-     * @returns 数据行数组
+     * @returns Array of row data.
      */
-    protected abstract getRowSet(result:any): Array<any>;
+    protected abstract getRowSet(result: any): Array<any>;
 
     /**
-     * 返回受影响的行数
-     * @param result - 执行结果对象
+     * Retrieves affected row count from an execution result.
+     * @param result - Raw execution result.
      * @protected
      * @abstract
-     * @returns 受影响的行数
+     * @returns Affected row count.
      */
-    protected abstract getAffectRows(result:any): number;
+    protected abstract getAffectRows(result: any): number;
 
     /**
-     * 下划线命名转换为驼峰命名
-     * @param name - 要转换的字段名
+     * Converts underscore_case to camelCase.
+     * @param name - Field name to convert.
      * @protected
-     * @returns 转换后的驼峰命名字符串
+     * @returns CamelCase string.
      */
     protected toCamel(name: string) {
         return name.replace(/\_(\w)/g, (all, letter) => {
@@ -338,20 +331,20 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 构建字段对应列表
-     * @param fields - 字段信息数组
+     * Builds field name mapping map.
+     * @param fields - Array of field metadata.
      * @protected
-     * @returns 字段映射Map对象
+     * @returns Field mapping Map.
      */
     protected buildFieldsMap(fields: Array<any>): Map<string, string> {
         return null;
     }
 
     /**
-     * 设置嵌套对象的属性值
-     * @param obj - 目标对象
-     * @param field - 字段名（支持点分隔的嵌套字段）
-     * @param value - 要设置的值
+     * Sets property value on a nested object path (supports dot-separated fields like 'profile.name').
+     * @param obj - Target object.
+     * @param field - Field path string.
+     * @param value - Value to set.
      * @protected
      */
     protected setNestObj(obj: any, field: string, value: any): void {
@@ -361,7 +354,7 @@ export default abstract class DBConnection {
             let nestObj = obj;
             for (let i = 0; i < attrs.length - 1; i++) {
                 nestObj[attr] = nestObj[attr] ?? {};
-                nestObj = nestObj[attr]
+                nestObj = nestObj[attr];
                 attr = this.toCamel(attrs[i + 1]);
             }
             nestObj[attr] = value;
@@ -369,12 +362,12 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 将返回的多行数据转换成数组对象
-     * @param result - 查询结果对象
+     * Maps raw database rows into mapped JavaScript object array.
+     * @param result - Raw query result.
      * @protected
-     * @returns 转换后的数据对象数组
+     * @returns Array of mapped objects.
      */
-    protected resultToList(result:any): Array<any> {
+    protected resultToList(result: any): Array<any> {
         let list: Array<any> = [];
         let fields = this.buildFieldsMap(result.fields);
         result.rows.forEach(row => {
@@ -388,22 +381,21 @@ export default abstract class DBConnection {
     }
 
     /**
-     * 返回设定结果集大小的限制语句
-     * @param rowCount - 行数限制
-     * @param offset - 偏移量
-     * @returns LIMIT和OFFSET语句字符串
+     * Returns the LIMIT and OFFSET clause for the active database dialect.
+     * @param rowCount - Maximum row count.
+     * @param offset - Query offset.
+     * @returns LIMIT and OFFSET clause string.
      */
     getRowSetLimitClause(rowCount: number, offset: number): string {
         return ` limit ${rowCount} offset ${offset}`;
     }
 
     /**
-     * 将首行转换为对象，如果首行不存在，返回空
-     * @param result - 查询结果对象
+     * Converts the first row of a result into a mapped object, or null if empty.
+     * @param result - Raw query result.
      * @protected
      * @abstract
-     * @returns 第一行数据对象或null
+     * @returns First row object or null.
      */
     protected abstract getFirstRow(result: any): any;
-
 }

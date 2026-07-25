@@ -1,28 +1,28 @@
 /**
- * 批量处理记录接口
- * @template T - 数据类型
+ * Batch processing record interface.
+ * @template T - Data object type.
  */
 export default interface BatchRecord<T> {
 
     /**
-     * 记录号，通常是行号
+     * Record index or row number.
      */
     recNo: number;
 
     /**
-     * 实际数据对象
+     * Actual data object payload.
      */
     data: T;
 
     /**
-     * 处理过程中的错误信息
+     * Error information encountered during processing.
      */
     error: any;
 
 }
 
 /**
- * 批量处理记录数组类型定义
- * @template T - 数据类型
+ * Array type definition for batch processing records.
+ * @template T - Data object type.
  */
 export type BatchRecords<T> = Array<BatchRecord<T>>;

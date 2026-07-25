@@ -1,12 +1,12 @@
 import DBConnection from "./DBConnection.js";
 
 /**
- * 数据库连接工厂接口
+ * Database connection factory interface.
  */
 export default interface DBFactory {
     /**
-     * 创建数据库连接
-     * @returns Promise返回数据库连接对象
+     * Creates a new database connection instance.
+     * @returns Promise resolving to a DBConnection object.
      */
-    createDBConnection():Promise<DBConnection>;
+    createDBConnection(): Promise<DBConnection>;
 }

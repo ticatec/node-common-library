@@ -21,9 +21,9 @@ A comprehensive Node.js database access framework providing robust abstractions 
 ## 📦 Installation
 
 ```bash
-npm install @ticatec/node-common-library
-# peer dependencies required at runtime:
-npm install pino reflect-metadata
+pnpm add @ticatec/node-common-library @ticatec/logger-wrapper pino reflect-metadata
+# or npm
+npm install @ticatec/node-common-library @ticatec/logger-wrapper pino reflect-metadata
 ```
 
 The package is published as dual ESM/CJS. Consumers do not need any extra configuration — `require()` works in CommonJS projects and `import` works in ESM / TypeScript projects.
@@ -38,16 +38,16 @@ const { DBManager, beanFactory, CommonService, CommonDAO } = require('@ticatec/n
 
 ## 🚀 Quick Start
 
-### 1. Initialize Logger Injection (Optional)
+### 1. Initialize Logger (`@ticatec/logger-wrapper`)
 
-Host applications initialize their own Pino logger instance and inject it into the library via `setLogger()`:
+Host applications initialize Pino logger and call `initialize()` ONCE at application startup:
 
 ```typescript
 import pino from 'pino';
-import { setLogger } from '@ticatec/node-common-library';
+import { initialize } from '@ticatec/logger-wrapper';
 
 const appLogger = pino({ level: process.env.LOG_LEVEL || 'info' });
-setLogger(appLogger);
+initialize(appLogger);
 ```
 
 ### 2. Initialize the database manager

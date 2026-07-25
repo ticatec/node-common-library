@@ -5,16 +5,15 @@ export default abstract class BitsBoolean {
         this.value = Math.floor(value);
     }
 
-
     /**
-     * 将指定位置的位设置为true或false
-     * @param pos - 位位置（0-31）
-     * @param value - 要设置的布尔值
+     * Sets the bit at the specified position to true or false.
+     * @param pos - Bit position (0-31).
+     * @param value - Boolean value to set.
      * @protected
      */
     protected setBitValue(pos: number, value: boolean): void {
         if (pos < 0 || pos > 31) {
-            throw new Error("invalid bit pos.");
+            throw new Error("Invalid bit position.");
         }
         if (value) {
             this.value |= (1 << pos);
@@ -24,23 +23,23 @@ export default abstract class BitsBoolean {
     }
 
     /**
-     * 读取指定位置的位值
-     * @param pos - 位位置（0-31）
+     * Reads the bit value at the specified position.
+     * @param pos - Bit position (0-31).
      * @protected
-     * @returns 指定位置的布尔值
+     * @returns Boolean value at the specified bit position.
      */
     protected getBitValue(pos: number): boolean {
         if (pos < 0 || pos > 31) {
-            throw new Error("invalid bit pos.");
+            throw new Error("Invalid bit position.");
         }
         return (this.value & (1 << pos)) !== 0;
     }
 
     /**
-     * 从布尔数组创建位值
-     * @param boolArray - 布尔值数组
+     * Creates a bitfield number from a boolean array.
+     * @param boolArray - Array of boolean values.
      * @static
-     * @returns 位操作后的数值
+     * @returns Number resulting from bitwise operations.
      */
     static fromBooleanArray(boolArray: boolean[]): number {
         let result = 0;
@@ -55,9 +54,9 @@ export default abstract class BitsBoolean {
     }
 
     /**
-     * 将位值转换为布尔数组
-     * @param length - 输出数组的长度
-     * @returns 布尔值数组
+     * Converts the current bitfield value into a boolean array.
+     * @param length - Length of the output boolean array.
+     * @returns Array of boolean values.
      */
     toBooleanArray(length: number): boolean[] {
         const result: boolean[] = [];
