@@ -1,5 +1,7 @@
 # Dynamic Conditional Pagination Query Framework
 
+[中文文档](SEARCH_CRITERIA_CN.md) | English
+
 ## Overview
 
 This is a TypeScript-based dynamic conditional pagination query framework that provides flexible database querying and pagination functionality. By inheriting the abstract base class `SearchCriteria`, you can quickly build pagination query functionality with dynamic query conditions.
@@ -124,7 +126,7 @@ protected wrapLikeMatch(s: string): string       // Add % to both ends of string
 ### 1. Creating a Query Class
 
 ```typescript
-import CommonSearchCriteria from './CommonSearchCriteria';
+import { CommonSearchCriteria } from '@ticatec/node-common-library';
 
 const BASE_SQL = `
     SELECT p.code, p.name, p.status, pc.name as "category.name"

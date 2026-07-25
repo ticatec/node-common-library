@@ -1,7 +1,8 @@
 
-import StringUtils from "./StringUtils";
-import DBConnection from "./db/DBConnection";
-import log4js, {Logger} from 'log4js';
+import StringUtils from "./StringUtils.js";
+import DBConnection from "./db/DBConnection.js";
+import {getLogger, Logger} from "./Logger.js";
+import TransactionManager from "./TransactionManager.js";
 
 /**
  * 快速搜索结果接口
@@ -23,8 +24,21 @@ export default abstract class CommonDAO {
     protected readonly logger: Logger;
 
     protected constructor() {
-        this.logger = log4js.getLogger(this.constructor.name);
+        this.logger = getLogger(this.constructor.name);
         this.logger.debug(`创建DAO实例:${this.constructor.name}`);
+    }
+
+    /**
+     * 获取当前线程的数据库连接（自动感知事务）
+     * - 若当前存在事务，返回事务连接
+     * - 否则返回新连接（调用者需负责关闭）
+     */
+    protected async getDBConnection(): Promise<DBConnection> {
+        const conn = TransactionManager.getCurrentConnection();
+        if (!conn) {
+            throw new Error('No database connection available. Ensure you are inside a @Transaction or using TransactionManager.execute().');
+        }
+        return conn;
     }
 
     /**
@@ -38,14 +52,14 @@ export default abstract class CommonDAO {
 
     /**
      * 执行count语句，返回count值
-     * @param conn - 数据库连接对象
      * @param sql - 要执行的count SQL语句
      * @param params - SQL参数数组
      * @param key - 计数字段的键名，默认为'cc'
      * @protected
      * @returns Promise返回计数值
      */
-    protected async executeCountSQL(conn: DBConnection, sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
+    protected async executeCountSQL(sql: string, params: Array<any>, key: string = 'cc'): Promise<number> {
+        const conn: DBConnection = await this.getDBConnection();
         const data = await conn.find(sql, params);
         const s = data == null ? null : data[key];
         return s == null ? 0 : parseInt(s, 10);
@@ -97,14 +111,14 @@ export default abstract class CommonDAO {
      * @returns Promise返回包含列表数据和是否有更多数据的对象
      */
     protected async quickSearch<T = any>(
-        conn: DBConnection,
         sql: string,
         params: Array<any> = [],
         pageNo: number = 1,
         rowCount: number = 25,
         booleanFields?: Array<string>
     ): Promise<QuickSearchResult<T>> {
-        let count = await this.executeCountSQL(conn, `select count(*) as cc from (${sql}) a`, params);
+        const conn: DBConnection = await this.getDBConnection();
+        let count = await this.executeCountSQL(`select count(*) as cc from (${sql}) a`, params);
         let offset = (pageNo - 1) * rowCount;
         if (count > offset) {
             let list = await conn.listQuery(`${sql} offset ${offset} limit ${rowCount}`, params, null, booleanFields);

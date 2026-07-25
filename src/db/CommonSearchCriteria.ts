@@ -1,7 +1,7 @@
-import DBConnection from './DBConnection';
-import PaginationList from "./PaginationList";
-import StringUtils from "../StringUtils";
-import log4js, {Logger} from 'log4js';
+import DBConnection from './DBConnection.js';
+import PaginationList from "./PaginationList.js";
+import StringUtils from "../StringUtils.js";
+import {getLogger, Logger} from "../Logger.js";
 
 const DEFAULT_ROWS_PAGE = 25;
 const FIRST_PAGE = 1;
@@ -19,7 +19,7 @@ export default abstract class CommonSearchCriteria {
     protected booleanFields?: Array<string>;
 
     protected constructor(criteria?: any) {
-        this.logger = log4js.getLogger(this.constructor.name);
+        this.logger = getLogger(this.constructor.name);
         this.page = StringUtils.parseNumber(criteria?.page, FIRST_PAGE);
         this.rows = StringUtils.parseNumber(criteria?.rows, DEFAULT_ROWS_PAGE);
         this.criteria = criteria;

@@ -1,23 +1,43 @@
 {
   "name": "@ticatec/node-common-library",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "A comprehensive Node.js database access framework providing robust abstractions for database connection management, SQL execution, transaction handling, pagination, and dynamic query building.",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "type": "module",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/cjs/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./lib/cjs/index.d.ts",
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.js"
+    },
+    "./lib/db/Field": {
+      "types": "./lib/cjs/db/Field.d.ts",
+      "import": "./lib/esm/db/Field.js",
+      "require": "./lib/cjs/db/Field.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "lib",
+    "lib/**/*",
+    "assets/**/*",
     "README.md",
     "README_CN.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "rm -rf ./lib && tsc",
+    "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\"",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "copy:pkg": "node -e \"const fs=require('fs');fs.copyFileSync('assets/cjs-package.json','lib/cjs/package.json');fs.copyFileSync('assets/esm-package.json','lib/esm/package.json')\"",
+    "build": "npm run clean && npm run build:cjs && npm run build:esm && npm run copy:pkg",
     "prebuild": "npm run lint",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm run build",
     "publish-public": "npm publish --access public",
     "lint": "echo \"Linting completed\"",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf ./lib"
+    "typecheck": "tsc -p tsconfig.cjs.json --noEmit && tsc -p tsconfig.esm.json --noEmit"
   },
   "keywords": [
     "nodejs",
@@ -37,7 +57,10 @@
     "dependency-injection",
     "typescript",
     "framework",
-    "ticatec"
+    "ticatec",
+    "esm",
+    "commonjs",
+    "dual-module"
   ],
   "repository": {
     "type": "git",
@@ -54,10 +77,15 @@
   },
   "homepage": "https://github.com/ticatec/node-common-library/tree/main/node-common-library",
   "engines": {
-    "node": ">=14.0.0",
+    "node": ">=18.0.0",
     "npm": ">=6.0.0"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
+    "reflect-metadata": "^0.2.2",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -66,10 +94,10 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "log4js": "^6.7.0"
+    "pino": "^10.3.1"
   },
   "peerDependenciesMeta": {
-    "log4js": {
+    "pino": {
       "optional": false
     }
   }

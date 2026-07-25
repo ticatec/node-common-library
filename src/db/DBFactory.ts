@@ -1,4 +1,4 @@
-import DBConnection from "./DBConnection";
+import DBConnection from "./DBConnection.js";
 
 /**
  * 数据库连接工厂接口

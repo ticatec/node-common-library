@@ -1,4 +1,4 @@
-import CommonSearchCriteria from "./CommonSearchCriteria";
+import CommonSearchCriteria from "./CommonSearchCriteria.js";
 
 
 export default abstract class SearchCriteria extends CommonSearchCriteria {

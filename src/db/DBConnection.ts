@@ -1,8 +1,8 @@
-import Field from "./Field";
+import Field from "./Field.js";
 import fs from "fs";
-import log4js, {Logger} from 'log4js';
-import PaginationList from "./PaginationList";
-import CommonSearchCriteria from "./CommonSearchCriteria";
+import {getLogger, Logger} from "../Logger.js";
+import PaginationList from "./PaginationList.js";
+import CommonSearchCriteria from "./CommonSearchCriteria.js";
 
 type PostConstructionFun = (obj: any) => void;
 
@@ -14,7 +14,7 @@ export default abstract class DBConnection {
     protected readonly logger: Logger;
 
     protected constructor() {
-        this.logger = log4js.getLogger("SQL");
+        this.logger = getLogger("SQL");
     }
 
     /**
@@ -260,11 +260,11 @@ export default abstract class DBConnection {
         const sqlStatements = this.loadAndSplitSQL(file);
         for (const statement of sqlStatements) {
             try {
-                this.logger.debug('execute sql statement: ', statement);
+                this.logger.debug({ sql: statement }, 'execute sql statement');
                 await this.executeSQL(statement);
             } catch (error) {
                 hasError = true;
-                this.logger.error('execute sql statement with error.', error);
+                this.logger.error({ error, sql: statement }, 'execute sql statement with error');
             }
         }
         return hasError;

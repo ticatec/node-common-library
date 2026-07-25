@@ -1,10 +1,13 @@
 
-import log4js from 'log4js';                                                                                                                                                                                                                                                                                                        import DBConnection from "./DBConnection";
-import DBFactory from "./DBFactory";
+import {getLogger} from "../Logger.js";
+import DBConnection from "./DBConnection.js";
+import DBFactory from "./DBFactory.js";
 
-const logger = log4js.getLogger('DBManager')
+const logger = getLogger('DBManager');
 
 export default class DBManager {
+
+    private static instance: DBManager;
 
     private factory: DBFactory;
 
@@ -18,11 +21,11 @@ export default class DBManager {
      * @returns 数据库管理器实例
      */
     static init(factory: DBFactory): DBManager {
-        if (global.DBManagerInstance == null) {
-            logger.debug('初始化数据库管理工厂', factory);
-            global.DBManagerInstance = new DBManager(factory)
+        if (DBManager.instance == null) {
+            logger.debug({factory}, '初始化数据库管理工厂');
+            DBManager.instance = new DBManager(factory)
         }
-        return global.DBManagerInstance;
+        return DBManager.instance;
     }
 
     /**
@@ -30,7 +33,7 @@ export default class DBManager {
      * @returns 数据库管理器实例
      */
     static getInstance(): DBManager {
-        return global.DBManagerInstance;
+        return DBManager.instance;
     }
 
     /**

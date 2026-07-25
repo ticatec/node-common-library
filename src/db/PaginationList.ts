@@ -2,7 +2,7 @@
 /**
  * 分页查询结果接口
  */
-export default interface PaginationList {
+export default interface PaginationList<> {
     /**
      * 总记录数
      */

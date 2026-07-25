@@ -1,6 +1,5 @@
-import log4js from "log4js";
-import beanFactory from "./BeanFactory";
-import {Scope} from "./Scope";
+import {getLogger} from "./Logger.js";
+import beanFactory from "./BeanFactory.js";
 
 export type BeanLoader = () => Promise<any>;
 
@@ -8,7 +7,7 @@ export default class Beans {
 
     private static instance: Beans;
     private _types = {}
-    protected logger = log4js.getLogger('Beans');
+    protected logger = getLogger('Beans');
 
     private constructor() {
     }
@@ -29,11 +28,10 @@ export default class Beans {
      * 注册一个Bean类型
      * @param name - Bean的名称
      * @param loader - Bean的加载器函数
-     * @param scope - Bean的作用域，默认为单例模式
      */
-    register(name: string, loader: BeanLoader, scope: Scope = Scope.Singleton) {
+    register(name: string, loader: BeanLoader) {
         this.logger.debug(`注册类型${name}`);
-        this._types[name] = {loader, scope}
+        this._types[name] = {loader}
     }
 
     /**
@@ -41,12 +39,12 @@ export default class Beans {
      * @returns Promise完成加载操作
      */
     async load(): Promise<void> {
-        this.logger.debug('引入注册类型', this._types);
+        this.logger.debug(this._types, '引入注册类型');
         for (let t in this._types) {
             let v = this._types[t];
             if (v.loader != null) {
                 let classLoader = (await v.loader()).default;
-                beanFactory.register(t, classLoader, v.scope);
+                beanFactory.register(t, classLoader);
             }
         }
     }

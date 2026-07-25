@@ -1,5 +1,5 @@
-import BaseDAO from "./BaseDAO";
-import DBConnection from "../db/DBConnection";
+import BaseDAO from "./BaseDAO.js";
+import DBConnection from "../db/DBConnection.js";
 
 export default interface BaseCRUDDAO<T, K> extends BaseDAO<T, K> {
 

@@ -1,4 +1,6 @@
-# 动态条件分页查询框架
+# 动态条件分页查询框架使用指南
+
+[English](SEARCH_CRITERIA.md) | 中文文档
 
 ## 概述
 
@@ -124,7 +126,7 @@ protected wrapLikeMatch(s: string): string       // 在字符串两端添加 %
 ### 1. 创建查询类
 
 ```typescript
-import CommonSearchCriteria from './CommonSearchCriteria';
+import { CommonSearchCriteria } from '@ticatec/node-common-library';
 
 const BASE_SQL = `
     SELECT p.code, p.name, p.status, pc.name as "category.name"

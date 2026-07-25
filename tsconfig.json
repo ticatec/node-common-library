@@ -1,13 +1,18 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "esModuleInterop": true,
     "target": "es2017",
-    "moduleResolution": "node",
-    "sourceMap": true,
+    "lib": ["es2017"],
     "declaration": true,
-    "outDir": "lib",
-    "sourceRoot": "src"
+    "declarationMap": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "sourceRoot": "src",
+    "types": ["node", "reflect-metadata"]
   },
-  "lib": ["es2017"]
+  "include": [
+    "src/**/*"
+  ]
 }

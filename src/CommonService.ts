@@ -1,72 +1,66 @@
-import DBManager from './db/DBManager'
-import DBConnection from "./db/DBConnection";
-import beanFactory from "./BeanFactory";
-import log4js, {Logger} from "log4js";
+// CommonService.ts
+import DBConnection from "./db/DBConnection.js";
+import beanFactory from "./BeanFactory.js";
+import { getLogger, Logger } from "./Logger.js";
+import TransactionManager from './TransactionManager.js';
+import {Propagation} from "./db/Transaction.js";
 
 type dbProcessor = (conn: DBConnection) => Promise<any>
 
 export default abstract class CommonService {
-
     protected readonly logger: Logger;
 
     protected constructor() {
-        this.logger = log4js.getLogger(this.constructor.name);
+        this.logger = getLogger(this.constructor.name);
         this.logger.debug(`创建Service实例:${this.constructor.name}`);
-    }
-
-
-    /**
-     * 获取数据库连接
-     * @protected
-     * @returns Promise返回数据库连接对象
-     */
-    protected async getDBConnection():Promise<DBConnection> {
-        const dbMgr = DBManager.getInstance();
-        return await dbMgr.connect();
+        this._applyTransactionAspect();
     }
 
     /**
-     * 获取对应的DAO实例
-     * @param name - DAO的名称
-     * @protected
-     * @returns DAO实例对象
+     * 获取数据库连接 - 优先从当前事务获取
      */
-    protected getDAOInstance<T>(name: string): T {
+    protected async getDBConnection(): Promise<DBConnection> {
+        const conn = TransactionManager.getCurrentConnection();
+        if (!conn) {
+            throw new Error('No connection in current context. Ensure the calling Service method has @Transaction.');
+        }
+        return conn;
+    }
+
+    /**
+     * 获取对应的Repository实例
+     */
+    protected getRepositoryInstance<T extends object>(name: string): T {
         return beanFactory.createBean<T>(name);
     }
 
-    /**
-     * 在事务中运行数据库操作，自动处理事务的开始、提交和回滚
-     * @param dbProcessor - 数据库处理函数，接收数据库连接作为参数
-     * @returns Promise返回处理结果
-     */
-    executeInTx = async (dbProcessor): Promise<any> =>  {
-        let conn = await this.getDBConnection();
-        try {
-            await conn.beginTransaction();
-            let result = await dbProcessor(conn);
-            await conn.commit();
-            return result;
-        } catch (ex) {
-            await conn.rollback();
-            throw ex;
-        } finally {
-            await conn.close();
+    private _applyTransactionAspect(): void {
+        let proto = Object.getPrototypeOf(this);
+        const methodsToWrap: string[] = [];
+
+        while (proto && proto !== Object.prototype) {
+            const methodNames = Object.getOwnPropertyNames(proto)
+                .filter(name => name !== 'constructor' && typeof proto[name] === 'function');
+            for (const name of methodNames) {
+                const isTx = Reflect.getMetadata('transaction:enabled', proto, name);
+                if (isTx && !methodsToWrap.includes(name)) {
+                    methodsToWrap.push(name);
+                }
+            }
+            proto = Object.getPrototypeOf(proto);
+        }
+
+        for (const name of methodsToWrap) {
+            const originalMethod = this[name as keyof this] as Function;
+            if (typeof originalMethod !== 'function') continue;
+            const propagation = Reflect.getMetadata('transaction:propagation', Object.getPrototypeOf(this), name)
+                || Propagation.REQUIRED;
+
+            (this as any)[name] = async (...args: any[]) => {
+                return await TransactionManager.execute(propagation, async (conn) => {
+                    return await originalMethod.apply(this, args);
+                });
+            };
         }
     }
-
-    /**
-     * 在非事务中运行数据库操作
-     * @param dbProcessor - 数据库处理函数，接收数据库连接作为参数
-     * @returns Promise返回处理结果
-     */
-    executeNonTx = async (dbProcessor): Promise<any> =>  {
-        let conn = await this.getDBConnection();
-        try {
-            return await dbProcessor(conn);
-        } finally {
-            await conn.close();
-        }
-    }
-
 }

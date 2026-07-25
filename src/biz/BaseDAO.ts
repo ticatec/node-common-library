@@ -1,4 +1,4 @@
-import DBConnection from "../db/DBConnection";
+import DBConnection from "../db/DBConnection.js";
 
 export default interface BaseDAO<T, K> {
 
