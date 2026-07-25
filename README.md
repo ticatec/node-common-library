@@ -38,7 +38,19 @@ const { DBManager, beanFactory, CommonService, CommonDAO } = require('@ticatec/n
 
 ## 🚀 Quick Start
 
-### 1. Initialize the database manager
+### 1. Initialize Logger Injection (Optional)
+
+Host applications initialize their own Pino logger instance and inject it into the library via `setLogger()`:
+
+```typescript
+import pino from 'pino';
+import { setLogger } from '@ticatec/node-common-library';
+
+const appLogger = pino({ level: process.env.LOG_LEVEL || 'info' });
+setLogger(appLogger);
+```
+
+### 2. Initialize the database manager
 
 Implement `DBFactory` for your database driver (or use one of the sibling packages), then call `DBManager.init()` exactly once at application startup.
 

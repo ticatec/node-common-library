@@ -38,7 +38,19 @@ const { DBManager, beanFactory, CommonService, CommonDAO } = require('@ticatec/n
 
 ## 🚀 快速开始
 
-### 1. 初始化数据库管理器
+### 1. 注入应用层 Logger（可选）
+
+应用层在启动时初始化自己的 Pino 日志实例，并通过 `setLogger()` 注入给公共库：
+
+```typescript
+import pino from 'pino';
+import { setLogger } from '@ticatec/node-common-library';
+
+const appLogger = pino({ level: process.env.LOG_LEVEL || 'info' });
+setLogger(appLogger);
+```
+
+### 2. 初始化数据库管理器
 
 为你的数据库驱动实现 `DBFactory`（或使用同仓的兄弟包），然后在应用启动时调用一次 `DBManager.init()`。
 

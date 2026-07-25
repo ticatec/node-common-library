@@ -18,7 +18,7 @@ import BaseDAO from "./biz/BaseDAO.js";
 import BaseCRUDDAO from "./biz/BaseCRUDDAO.js";
 import BatchRecord, {BatchRecords} from "./biz/BatchRecord.js";
 import {PostConstructionFun} from "./db/DBConnection.js";
-import {getLogger, rootLogger} from "./Logger.js";
+import {getLogger, rootLogger, setLogger, setLoggerFactory} from "./Logger.js";
 import type {Logger} from "./Logger.js";
 
 
@@ -33,5 +33,5 @@ export {
     TransactionManager, Transaction, Propagation,
     BaseDAO, BaseCRUDDAO, BatchRecord, BatchRecords,
     PostConstructionFun, QuickSearchResult,
-    getLogger, rootLogger, Logger
+    getLogger, setLogger, setLoggerFactory, rootLogger, Logger
 };
