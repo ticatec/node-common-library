@@ -5,8 +5,8 @@ export default abstract class CommonRepository {
 
     protected readonly logger: Logger;
 
-    public constructor() {
-        this.logger = getLogger(this.constructor.name);
+    protected constructor() {
+        this.logger = getLogger(this.constructor.name, "repository");
         this.logger.debug(`Create repository instance:${this.constructor.name}`);
     }
 

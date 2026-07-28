@@ -22,8 +22,8 @@ export default abstract class CommonDAO {
 
     protected readonly logger: Logger;
 
-    public constructor() {
-        this.logger = getLogger(this.constructor.name);
+    protected constructor() {
+        this.logger = getLogger(this.constructor.name, "controller");
         this.logger.debug(`Created DAO instance: ${this.constructor.name}`);
     }
 

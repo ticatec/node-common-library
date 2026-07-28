@@ -9,8 +9,8 @@ const wrappedPrototypes = new WeakSet<object>();
 export default abstract class CommonService {
     protected readonly logger: Logger;
 
-    public constructor() {
-        this.logger = getLogger(this.constructor.name);
+    protected constructor() {
+        this.logger = getLogger(this.constructor.name, "service");
         this.logger.debug(`Created Service instance: ${this.constructor.name}`);
         this._applyTransactionAspect();
     }
