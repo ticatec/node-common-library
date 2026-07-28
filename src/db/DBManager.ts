@@ -9,7 +9,7 @@ export default class DBManager {
 
     private static get logger(): Logger {
         if (!DBManager._logger) {
-            DBManager._logger = getLogger('DBManager');
+            DBManager._logger = getLogger('DBManager', 'db');
         }
         return DBManager._logger;
     }

@@ -15,7 +15,7 @@ export default class TransactionManager {
 
     private static get logger(): Logger {
         if (!TransactionManager._logger) {
-            TransactionManager._logger = getLogger('TransactionManager');
+            TransactionManager._logger = getLogger('TransactionManager', 'db');
         }
         return TransactionManager._logger;
     }
