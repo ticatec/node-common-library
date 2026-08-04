@@ -28,13 +28,13 @@ protected sql: string;                   // SQL query statement
 protected orderBy: string;              // ORDER BY clause
 protected params: Array<any>;           // SQL parameter array
 private readonly page: number;          // Page number
-private readonly rows: number;          // Records per page
+private readonly pageSize: number;      // Records per page
 protected criteria: any;                // Query criteria object
 ```
 
 #### Key Constants
 
-- `DEFAULT_ROWS_PAGE = 25`: Default records per page
+- `DEFAULT_PAGE_SIZE = 25`: Default records per page
 - `FIRST_PAGE = 1`: First page number
 
 ### Core Methods
@@ -71,16 +71,17 @@ protected addWildcardCriteria(text: string, field: string): number
 - **Example**: `this.addWildcardCriteria(this.criteria.name, 'p.name')`
 - **Legacy Alias**: `buildStarCriteria(text, field)`
 
-##### buildRangeCriteria(fromValue, toValue, field)
+##### addRangeCriteria(fromValue, toValue, field)
 ```typescript
-protected buildRangeCriteria(fromValue: any, toValue: any, field: string): number
+protected addRangeCriteria(fromValue: any, toValue: any, field: string): number
 ```
 - **Purpose**: Build range query conditions (`field >= $N AND field < $M`)
 - **Parameters**:
     - `fromValue`: Start value (inclusive >=)
     - `toValue`: End value (exclusive <). Automatically calls `getNextDayStart(toValue)` when `toValue` is a Date instance.
     - `field`: Database field name
-- **Example**: `this.buildRangeCriteria(startDate, endDate, 'created_at')`
+- **Example**: `this.addRangeCriteria(startDate, endDate, 'created_at')`
+- **Legacy Alias**: `buildRangeCriteria(fromValue, toValue, field)`
 
 #### 3. Query Execution Methods
 
@@ -171,7 +172,7 @@ export default class ProductSearchCriteria extends CommonSearchCriteria {
         }
         
         // Price range query example
-        this.buildRangeCriteria(
+        this.addRangeCriteria(
             this.criteria.priceFrom, 
             this.criteria.priceTo, 
             'p.price'
@@ -186,7 +187,7 @@ export default class ProductSearchCriteria extends CommonSearchCriteria {
 // Create search criteria
 const searchCriteria = new ProductSearchCriteria('tenant001', {
     page: 1,
-    rows: 20,
+    pageSize: 20,
     name: 'iPhone*',        // Supports wildcards
     status: 'active',       // Exact match query
     categoryPath: '/electronics/phones',  // Path prefix matching
@@ -224,7 +225,7 @@ this.addWildcardCriteria('exact', 'field_name');
 
 ### 3. Range Query
 ```typescript
-this.buildRangeCriteria(startValue, endValue, 'field_name');
+this.addRangeCriteria(startValue, endValue, 'field_name');
 // Generates: AND field_name >= $n AND field_name < $m
 ```
 

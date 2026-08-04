@@ -166,7 +166,7 @@ class UserSearchCriteria extends CommonSearchCriteria {
             this.addEqualsCriteria(this.criteria.email, 'email');        // exact match
         }
         if (this.criteria?.dateFrom || this.criteria?.dateTo) {
-            this.buildRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');
+            this.addRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');
         }
     }
 }
@@ -176,7 +176,7 @@ const result: PaginationList = await new UserSearchCriteria({
     name: 'John*',
     email: 'john@example.com',
     page: 1,
-    rows: 20
+    pageSize: 20
 }).paginationQuery(conn);
 
 console.log(`总计: ${result.count}, 总页数: ${result.pages}`);
@@ -267,9 +267,9 @@ const userWithProfile = await conn.find(
 | 方法 | 用途 |
 | --- | --- |
 | `buildDynamicQuery()` | 重写以追加 `and …` 子句并 push 参数 |
-| `buildCriteria(value, field)` | 非空时追加 `field = $N` |
-| `buildStarCriteria(text, field)` | 包含 `*` 走 `LIKE`，否则 `=` |
-| `buildRangeCriteria(from, to, field)` | 追加 `field >= $N` 与 / 或 `field < $N+1` |
+| `addEqualsCriteria(value, field)` / `buildCriteria` | 非空时追加 `field = $N` |
+| `addWildcardCriteria(text, field)` / `buildStarCriteria` | 包含 `*` 走 `LIKE`，否则 `=` |
+| `addRangeCriteria(from, to, field)` / `buildRangeCriteria` | 追加 `field >= $N` 与 / 或 `field < $N+1` |
 | `wrapLikeMatch(s)` / `replaceWildStar(s)` | LIKE 值字符串工具 |
 | `setBooleanFields(...fields)` | 设置结果集中需要转布尔的字段 |
 | `paginationQuery(conn)` | 返回 `{ count, hasMore, list, pages }` |

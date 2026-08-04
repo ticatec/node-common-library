@@ -27,9 +27,10 @@ English | [中文文档](SEARCH_CRITERIA_CN.md)
 - **逻辑**：包含 `*` 时转换为 `LIKE`，不含 `*` 时使用 `=` 精确匹配
 - **别名**：`buildStarCriteria(text, field)`
 
-##### buildRangeCriteria(fromValue, toValue, field)
+##### addRangeCriteria(fromValue, toValue, field) / buildRangeCriteria(fromValue, toValue, field)
 - **用途**：构建范围查询条件（`field >= $N AND field < $M`）
 - **说明**：当 `toValue` 为 Date 实例时，自动调用 `getNextDayStart(toValue)` 计算次日零点
+- **别名**：`buildRangeCriteria(fromValue, toValue, field)`
 
 #### 2. 处理器与工具方法
 
@@ -64,7 +65,7 @@ export default class ProductSearchCriteria extends CommonSearchCriteria {
         this.addEqualsCriteria(this.criteria.status, 'status');
         
         // 日期范围匹配
-        this.buildRangeCriteria(this.criteria.createdFrom, this.criteria.createdTo, 'created_at');
+        this.addRangeCriteria(this.criteria.createdFrom, this.criteria.createdTo, 'created_at');
     }
     
     protected getPostProcessor() {

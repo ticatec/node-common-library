@@ -40,7 +40,7 @@ class SampleSearchCriteria extends CommonSearchCriteria {
     }
 
     public testBuildRange(from: any, to: any, field: string) {
-        return this.buildRangeCriteria(from, to, field);
+        return this.addRangeCriteria(from, to, field);
     }
 
     public testBuildStar(text: string, field: string) {
@@ -77,7 +77,7 @@ describe('CommonSearchCriteria', () => {
 
     test('should calculate pages correctly using Math.ceil', async () => {
         const conn = new MockDBConnectionForCriteria();
-        const criteria = new SampleSearchCriteria({ page: 1, rows: 10 });
+        const criteria = new SampleSearchCriteria({ page: 1, pageSize: 10 });
         const res = await criteria.paginationQuery(conn);
 
         expect(res.count).toBe(35);

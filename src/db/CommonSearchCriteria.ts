@@ -3,7 +3,7 @@ import PaginationList from "./PaginationList.js";
 import StringUtils from "../StringUtils.js";
 import {getLogger, Logger} from "../Logger.js";
 
-const DEFAULT_ROWS_PAGE = 25;
+const DEFAULT_PAGE_SIZE = 25;
 const FIRST_PAGE = 1;
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
@@ -14,14 +14,14 @@ export default abstract class CommonSearchCriteria {
     protected orderBy: string = '';
     protected params: Array<any> = [];
     private readonly page: number;
-    private readonly rows: number;
+    private readonly pageSize: number;
     protected criteria: any;
     protected booleanFields?: Array<string>;
 
     protected constructor(criteria?: any) {
         this.logger = getLogger(this.constructor.name);
         this.page = StringUtils.parseNumber(criteria?.page, FIRST_PAGE);
-        this.rows = StringUtils.parseNumber(criteria?.rows, DEFAULT_ROWS_PAGE);
+        this.pageSize = StringUtils.parseNumber(criteria?.pageSize, DEFAULT_PAGE_SIZE);
         this.criteria = criteria;
     }
 
@@ -29,7 +29,7 @@ export default abstract class CommonSearchCriteria {
      * Sets fields to be coerced into boolean values.
      * @param fields - Array of field property paths (supports nested paths like 'user.isActive').
      */
-    setBooleanFields(...fields: Array<string>): void {
+    protected setBooleanFields(...fields: Array<string>): void {
         this.booleanFields = fields;
     }
 
@@ -38,9 +38,7 @@ export default abstract class CommonSearchCriteria {
      * @protected
      * @abstract
      */
-    protected buildDynamicQuery() {
-
-    }
+    protected abstract buildDynamicQuery(): any;
 
     /**
      * Queries the count of matching records.
@@ -65,15 +63,6 @@ export default abstract class CommonSearchCriteria {
      * @returns Post-processor function or null.
      */
     protected getPostProcessor(): ((obj: any) => void) | null {
-        return this.getPostConstructor();
-    }
-
-    /**
-     * Backward-compatible alias for getPostProcessor().
-     * @deprecated Override getPostProcessor() in new code instead.
-     * @protected
-     */
-    protected getPostConstructor(): any {
         return null;
     }
 
@@ -140,16 +129,7 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * Backward-compatible alias for getNextDayStart().
-     * @deprecated Use getNextDayStart() instead.
-     * @protected
-     */
-    protected getEndOfDay(d: any): Date | null {
-        return this.getNextDayStart(d);
-    }
-
-    /**
-     * Builds range query criteria (from / to boundaries).
+     * Adds range query criteria (from / to boundaries).
      * Automatically applies getNextDayStart to toValue if it is a Date instance.
      * @param fromValue - Start boundary value (inclusive >=).
      * @param toValue - End boundary value (exclusive <).
@@ -157,7 +137,7 @@ export default abstract class CommonSearchCriteria {
      * @protected
      * @returns Next parameter positional index.
      */
-    protected buildRangeCriteria(fromValue: any, toValue: any, field: string): number {
+    protected addRangeCriteria(fromValue: any, toValue: any, field: string): number {
         let idx = this.params.length + 1;
         if (this.isNotEmpty(fromValue)) {
             this.sql += ` and ${field} >= $${idx++}`;
@@ -198,15 +178,6 @@ export default abstract class CommonSearchCriteria {
     }
 
     /**
-     * Backward-compatible alias for addWildcardCriteria().
-     * @deprecated Use addWildcardCriteria() instead.
-     * @protected
-     */
-    protected buildStarCriteria(text: string, field: string): number {
-        return this.addWildcardCriteria(text, field);
-    }
-
-    /**
      * Adds equality query criteria (field = value).
      * @param value - Search value.
      * @param field - Field name.
@@ -220,15 +191,6 @@ export default abstract class CommonSearchCriteria {
             this.params.push(value);
         }
         return idx;
-    }
-
-    /**
-     * Backward-compatible alias for addEqualsCriteria().
-     * @deprecated Use addEqualsCriteria() instead.
-     * @protected
-     */
-    protected buildCriteria(value: any, field: string): number {
-        return this.addEqualsCriteria(value, field);
     }
 
     /**
@@ -249,14 +211,14 @@ export default abstract class CommonSearchCriteria {
         this.buildDynamicQuery();
         let count = await this.queryCount(conn, this.sql, this.params);
         if (count > 0) {
-            const rows = this.rows;
+            const pageSize = this.pageSize;
             let pageNo = this.page;
-            const offset = (pageNo - 1) * rows;
-            let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(rows, offset)} `;
-            this.logger.debug(`Total matching records: ${count}, need to read ${rows} records starting from ${offset}`);
+            const offset = (pageNo - 1) * pageSize;
+            let listSQL = `${this.sql} ${this.orderBy} ${conn.getRowSetLimitClause(pageSize, offset)} `;
+            this.logger.debug(`Total matching records: ${count}, need to read ${pageSize} records starting from ${offset}`);
             let list = count > offset ? await conn.listQuery(listSQL, this.params, this.getPostProcessor(), this.booleanFields) : [];
-            const hasMore = offset + rows < count;
-            const pages = Math.ceil(count / rows);
+            const hasMore = offset + pageSize < count;
+            const pages = Math.ceil(count / pageSize);
             return {count, hasMore, list, pages};
         } else {
             return {count, hasMore: false, list: [], pages: 0};

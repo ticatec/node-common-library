@@ -166,7 +166,7 @@ class UserSearchCriteria extends CommonSearchCriteria {
             this.addEqualsCriteria(this.criteria.email, 'email');        // exact match
         }
         if (this.criteria?.dateFrom || this.criteria?.dateTo) {
-            this.buildRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');
+            this.addRangeCriteria(this.criteria.dateFrom, this.criteria.dateTo, 'created_at');
         }
     }
 }
@@ -176,7 +176,7 @@ const result: PaginationList = await new UserSearchCriteria({
     name: 'John*',
     email: 'john@example.com',
     page: 1,
-    rows: 20
+    pageSize: 20
 }).paginationQuery(conn);
 
 console.log(`Total: ${result.count}, Pages: ${result.pages}`);
@@ -267,9 +267,9 @@ Dynamic query builder. `CommonSearchCriteria` is the concrete base; `SearchCrite
 | Method | Purpose |
 | --- | --- |
 | `buildDynamicQuery()` | Override to append `and …` clauses and push params |
-| `buildCriteria(value, field)` | Appends `field = $N` when value is non-empty |
-| `buildStarCriteria(text, field)` | `*` wildcards → `LIKE`, otherwise `=` |
-| `buildRangeCriteria(from, to, field)` | Appends `field >= $N` and/or `field < $N+1` |
+| `addEqualsCriteria(value, field)` / `buildCriteria` | Appends `field = $N` when value is non-empty |
+| `addWildcardCriteria(text, field)` / `buildStarCriteria` | `*` wildcards → `LIKE`, otherwise `=` |
+| `addRangeCriteria(from, to, field)` / `buildRangeCriteria` | Appends `field >= $N` and/or `field < $N+1` |
 | `wrapLikeMatch(s)` / `replaceWildStar(s)` | String helpers for LIKE values |
 | `setBooleanFields(...fields)` | Sets which result fields to coerce to boolean |
 | `paginationQuery(conn)` | Returns `{ count, hasMore, list, pages }` |
