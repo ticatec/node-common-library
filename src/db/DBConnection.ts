@@ -18,7 +18,11 @@ export default abstract class DBConnection {
     protected readonly logger: Logger;
 
     public constructor() {
-        this.logger = getLogger("SQL");
+        try {
+            this.logger = getLogger("SQL");
+        } catch (e) {
+            this.logger = { debug: () => {}, info: () => {}, error: () => {}, warn: () => {}, trace: () => {} } as any;
+        }
     }
 
     /**
@@ -188,6 +192,17 @@ export default abstract class DBConnection {
     }
 
     /**
+     * Sanitizes parameter array by converting any undefined elements to null.
+     * @param params - Parameter array or null/undefined.
+     * @public
+     * @returns Processed parameter array with undefined elements mapped to null, or null if empty.
+     */
+    public sanitizeParams(params?: Array<any> | null): Array<any> | null {
+        if (!params) return null;
+        return params.map(p => (p === undefined ? null : p));
+    }
+
+    /**
      * Executes a SELECT query returning a list of mapped objects.
      * @template T - Result item type.
      * @param sql - SQL query string.
@@ -196,7 +211,7 @@ export default abstract class DBConnection {
      * @param booleanFields - Field names to coerce to boolean values.
      */
     async listQuery<T = any>(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<Array<T>> {
-        let result = await this.fetchData(sql, params);
+        let result = await this.fetchData(sql, this.sanitizeParams(params));
         let list = this.resultToList(result);
         list.forEach(data => {
             if (booleanFields && booleanFields.length > 0) {
@@ -218,7 +233,7 @@ export default abstract class DBConnection {
      * @param booleanFields - Field names to coerce to boolean values.
      */
     async find<T = any>(sql: string, params: Array<any> | null = null, postConstruction: PostConstructionFun | null = null, booleanFields?: Array<string>): Promise<T | null> {
-        let result = await this.fetchData(sql, params);
+        let result = await this.fetchData(sql, this.sanitizeParams(params));
         let row = this.getFirstRow(result);
         if (row) {
             if (booleanFields && booleanFields.length > 0) {

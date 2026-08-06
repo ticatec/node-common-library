@@ -20,11 +20,12 @@ import BatchRecord, {BatchRecords} from "./biz/BatchRecord.js";
 import {PostConstructionFun} from "./db/DBConnection.js";
 import {getLogger} from "./Logger.js";
 import type {Logger} from "./Logger.js";
+import Beans from "./Beans.js";
 
 
 export {
     DBManager, DBConnection, DBFactory,
-    BeanFactory, beanFactory,
+    BeanFactory, beanFactory, Beans,
     CommonService, CommonDAO, CommonRepository,
     StringUtils, BitsBoolean,
     OptimisticLockException,
